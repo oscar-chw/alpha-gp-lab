@@ -1,4 +1,6 @@
+import math
 import random
+import statistics
 import unittest
 
 from helpers import panel_for, perturbed, small_config
@@ -50,6 +52,15 @@ class Evaluation(unittest.TestCase):
         small, big = parse('close'), parse('rank(ts_mean(close, 5))')
         self.assertGreater(score(m, small, 0.02, 0.001), score(m, big, 0.02, 0.001))
         self.assertGreater(score(m, small, 0.0, 0.0), score(m, small, 0.02, 0.0))
+
+    def test_t_statistics_and_net_sum_match_the_statistics_module(self):
+        m = Evaluator(self.panel, 1, 5).metrics(parse('-returns'), 20, 70, detail=True)
+        net, ic = m['net_series'], [x for x in m['ic_series'] if x is not None]
+        self.assertEqual(len(net), 50)
+        self.assertAlmostEqual(m['mean_net'], statistics.fmean(net), places=15)
+        self.assertAlmostEqual(m['sum_net'], math.fsum(net), places=15)
+        self.assertAlmostEqual(m['net_tstat'], statistics.fmean(net) / (statistics.stdev(net) / math.sqrt(len(net))), places=9)
+        self.assertAlmostEqual(m['ic_tstat'], statistics.fmean(ic) / (statistics.stdev(ic) / math.sqrt(len(ic))), places=9)
 
 
 if __name__ == '__main__':

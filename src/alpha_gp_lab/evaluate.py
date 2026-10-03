@@ -207,15 +207,12 @@ class Evaluator:
         valid = [x for x in ics if x is not None]
         n = len(turnover)
         mean_ic = math.fsum(valid) / len(valid) if valid else None
-        tstat = None
-        if len(valid) >= 2:
-            sd = math.sqrt(math.fsum((x - mean_ic) ** 2 for x in valid) / (len(valid) - 1))
-            tstat = mean_ic / (sd / math.sqrt(len(valid))) if sd > 0 else None
-        out = dict(mean_ic=mean_ic, ic_tstat=tstat, mean_turnover=math.fsum(turnover) / n,
-                   mean_gross=math.fsum(gross_ret) / n, mean_net=math.fsum(net) / n, sum_net=math.fsum(net),
+        out = dict(mean_ic=mean_ic, ic_tstat=_tstat(valid), mean_turnover=math.fsum(turnover) / n,
+                   mean_gross=math.fsum(gross_ret) / n, mean_net=math.fsum(net) / n, net_tstat=_tstat(net),
+                   sum_net=math.fsum(net),
                    intervals=n, valid_ic_intervals=len(valid), abstentions=sum(weights[t][0] is None for t in range(start, end)))
         if detail:
-            out['ic_series'] = ics
+            out['ic_series'], out['net_series'] = ics, net
         return out
 
     def fingerprint(self, node, start, end):
@@ -239,6 +236,15 @@ class Evaluator:
                 if c is not None:
                     vals.append(c)
         return math.fsum(vals) / len(vals) if vals else None
+
+
+def _tstat(xs):
+    """Mean over its standard error (sample sd); None below two values or with zero spread."""
+    if len(xs) < 2:
+        return None
+    m = math.fsum(xs) / len(xs)
+    sd = math.sqrt(math.fsum((x - m) ** 2 for x in xs) / (len(xs) - 1))
+    return m / (sd / math.sqrt(len(xs))) if sd > 0 else None
 
 
 def score(metrics, node, turnover_penalty, complexity_penalty):
