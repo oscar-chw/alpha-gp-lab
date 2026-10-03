@@ -9,6 +9,11 @@ from alpha_gp_lab.gp import compute_report, crossover, mutate
 from alpha_gp_lab.grammar import canonical, depth, parse, positions, size
 
 
+def inputs_in_tmp(config):
+    with tempfile.TemporaryDirectory() as tmp:
+        return inputs(config, tmp)
+
+
 def run(config, response=None):
     with tempfile.TemporaryDirectory() as tmp:
         args = (config, tmp) if response is None else (config, tmp, response)
@@ -106,14 +111,13 @@ class Search(unittest.TestCase):
             self.assertEqual(len({fps[n['id']] for n in nodes}), len(nodes))
 
     def test_equivalence_filter_rejects_monotone_rewrites(self):
-        response = 'returns\nrank(returns)\nzscore(returns)\n(returns + close)\n(close + returns)\n'
         config = small_config()
-        config['llm']['n'] = 5
-        fold = run(config, response)[0]['folds'][0]
-        seeds = [n['expression'] for n in fold['nodes'] if n['operation'] == 'llm_seed']
-        self.assertEqual(seeds, ['returns', '(returns + close)'])
-        self.assertGreaterEqual(fold['counts']['rejected_equivalent'], 2)
-        self.assertGreaterEqual(fold['counts']['rejected_duplicate'], 1)
+        config['gp'].update(population=2, generations=1, tournament=2, elitism=1, hall_of_fame=2)
+        _, panel, llm = inputs_in_tmp(config)
+        llm = dict(llm, accepted=['returns', 'rank(returns)', 'zscore(returns)', '(returns + close)', '(close + returns)'])
+        fold = compute_report(config, panel, llm)['folds'][0]
+        self.assertEqual([n['expression'] for n in fold['nodes']], ['returns', '(returns + close)'])
+        self.assertEqual((fold['counts']['rejected_equivalent'], fold['counts']['rejected_duplicate']), (2, 1))
 
     def test_correlation_filter(self):
         config = copy.deepcopy(self.config)
@@ -128,19 +132,25 @@ class Search(unittest.TestCase):
             for b in picked[:i]:
                 self.assertLessEqual(abs(ev.correlation(a, b, vs, ve)), 0.5)
         self.assertTrue(fold['correlation_rejected'])
-        self.assertTrue(all(r['max_abs_corr_to_shortlist'] > 0.5 for r in fold['correlation_rejected']))
+        self.assertTrue(all(r['max_abs_corr_to_selected'] > 0.5 for r in fold['correlation_rejected']))
         self.assertEqual(fold['selected_expression'], fold['shortlist'][0]['expression'])
+
+        # An already-selected alpha equal to this run's pick must push the pick elsewhere.
+        config['selection']['existing_alphas'] = [fold['selected_expression']]
+        other = run(config)[0]['folds'][0]
+        self.assertNotEqual(other['selected_expression'], fold['selected_expression'])
+        self.assertEqual(other['correlation_rejected'][0]['expression'], fold['selected_expression'])
+        self.assertLessEqual(abs(ev.correlation(parse(other['selected_expression']), picked[0], vs, ve)), 0.5)
 
     def test_variation_operators_keep_trees_valid_and_parents_intact(self):
         rng = random.Random(9)
-        a = parse('group_rank(winsorize(ts_delta(close, 2), std=4), industry)')
-        b = parse('(ts_corr(close, volume, 5) - rank(returns))')
+        a = parse('group_rank(winsorize(ts_delta(open, 2), std=4), industry)')   # leaves: open only
+        b = parse('(ts_corr(volume, returns, 5) - rank(returns))')               # leaves: volume, returns
         before = (str(a), str(b))
-        subtrees_b = {str(t) for _, t in positions(b)}
         for _ in range(100):
             child = crossover(a, b, rng)
             self.assertEqual(parse(str(child)), child)
-            self.assertTrue(any(str(t) in subtrees_b for _, t in positions(child)))
+            self.assertTrue(any(t.op in ('volume', 'returns') for _, t in positions(child)))
             mutant, kind = mutate(a, rng, [2, 3, 5])
             self.assertEqual(parse(str(mutant)), mutant)
             self.assertIn(kind, ('subtree', 'point', 'window', 'hoist', 'industry'))

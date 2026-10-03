@@ -10,11 +10,12 @@ This detects accidental or casual alteration. It is not a signature: someone who
 the code and every file can forge a consistent bundle.
 """
 from pathlib import Path
+import platform
 import sqlite3
 import sys
 
 from .config import canonical, digest, read_json, validate
-from .data import Panel
+from .data import Panel, synthetic_from_config
 from .gp import compute_report
 from .llm_seed import check_record
 
@@ -22,29 +23,44 @@ PACKAGE = Path(__file__).resolve().parent
 MEMBERS = ('config.json', 'panel.json', 'llm.json', 'code.json', 'identity.json', 'state.sqlite',
            'report.json', 'report.md')
 MAX_MEMBER_BYTES = 64 * 1024 * 1024
-TABLES = {
-    'nodes': 'id TEXT PRIMARY KEY, fold INTEGER NOT NULL, generation INTEGER NOT NULL, record TEXT NOT NULL',
-    'edges': 'child TEXT NOT NULL REFERENCES nodes(id), ordinal INTEGER NOT NULL, '
-             'parent TEXT NOT NULL REFERENCES nodes(id), PRIMARY KEY (child, ordinal)',
-    'results': 'node TEXT NOT NULL REFERENCES nodes(id), split TEXT NOT NULL, record TEXT NOT NULL, '
-               'PRIMARY KEY (node, split)',
-    'selection': 'fold INTEGER PRIMARY KEY, record TEXT NOT NULL',
-    'llm_proposals': 'ordinal INTEGER PRIMARY KEY, status TEXT NOT NULL, expression TEXT NOT NULL, reason TEXT',
+TABLES = {   # name -> (columns, primary-key columns)
+    'nodes': ('id TEXT PRIMARY KEY, fold INTEGER NOT NULL, generation INTEGER NOT NULL, record TEXT NOT NULL', ('id',)),
+    'edges': ('child TEXT NOT NULL REFERENCES nodes(id), ordinal INTEGER NOT NULL, '
+              'parent TEXT NOT NULL REFERENCES nodes(id), PRIMARY KEY (child, ordinal)', ('child', 'ordinal')),
+    'results': ('node TEXT NOT NULL REFERENCES nodes(id), split TEXT NOT NULL, record TEXT NOT NULL, '
+                'PRIMARY KEY (node, split)', ('node', 'split')),
+    'selection': ('fold INTEGER PRIMARY KEY, record TEXT NOT NULL', ('fold',)),
+    'llm_proposals': ('ordinal INTEGER PRIMARY KEY, status TEXT NOT NULL, expression TEXT NOT NULL, reason TEXT',
+                      ('ordinal',)),
 }
 
 
 def code_identity():
+    # Platform is part of the identity: libm differences can change low-order float bits.
     files = sorted(PACKAGE.glob('*.py'))
-    return dict(python=list(sys.version_info[:3]),
+    return dict(python=list(sys.version_info[:3]), platform=[sys.platform, platform.machine()],
                 files={'src/alpha_gp_lab/' + p.name: digest(p.read_bytes()) for p in files})
 
 
-def _schema(conn):
-    for name, cols in TABLES.items():
-        conn.execute(f'CREATE TABLE {name} ({cols})')
+def _ddl():
+    """(name, sql) for every table and trigger. UPDATE and DELETE abort; so does an INSERT that
+    would collide with an existing key, which is how INSERT OR REPLACE would otherwise rewrite a
+    row without firing the DELETE trigger."""
+    out = []
+    for name, (cols, key) in TABLES.items():
+        out.append((name, f'CREATE TABLE {name} ({cols})'))
+        abort = f"BEGIN SELECT RAISE(ABORT, '{name} is append-only'); END"
         for event in ('UPDATE', 'DELETE'):
-            conn.execute(f"CREATE TRIGGER {name}_no_{event.lower()} BEFORE {event} ON {name} "
-                         f"BEGIN SELECT RAISE(ABORT, '{name} is append-only'); END")
+            out.append((f'{name}_no_{event.lower()}', f'CREATE TRIGGER {name}_no_{event.lower()} BEFORE {event} ON {name} {abort}'))
+        match = ' AND '.join(f'{k} = NEW.{k}' for k in key)
+        out.append((f'{name}_no_replace', f'CREATE TRIGGER {name}_no_replace BEFORE INSERT ON {name} '
+                                          f'WHEN EXISTS (SELECT 1 FROM {name} WHERE {match}) {abort}'))
+    return out
+
+
+def _schema(conn):
+    for _, sql in _ddl():
+        conn.execute(sql)
 
 
 def _insert(conn, nodes, results):
@@ -65,6 +81,12 @@ def _selection(fold):
 def _llm_rows(llm):
     rows = [('accepted', e, None) for e in llm['accepted']] + [('rejected', r['line'], r['reason']) for r in llm['rejected']]
     return [(i, *row) for i, row in enumerate(rows)]
+
+
+def _check_panel(config, panel_raw):
+    """A synthetic panel must be exactly what its config generates; a CSV panel is pinned by its hash."""
+    if config['data']['kind'] == 'synthetic' and canonical(synthetic_from_config(config['data']).to_json()) != panel_raw:
+        raise ValueError('panel does not match the synthetic data config')
 
 
 def markdown(report):
@@ -94,6 +116,7 @@ def run(config_raw, panel, llm, out, *, _interrupt_after_generation=None):
     """Compute and persist one experiment into the fresh directory ``out``; return the report."""
     config = validate(read_json(config_raw))
     panel_raw = canonical(panel.to_json())
+    _check_panel(config, panel_raw)
     llm_raw = canonical(llm)
     code = code_identity()
     identity = dict(config_sha256=digest(config_raw), panel_sha256=digest(panel_raw), llm_sha256=digest(llm_raw),
@@ -162,6 +185,7 @@ def verify(out):
     panel = Panel.from_json(read_json(raw['panel.json']))
     if canonical(panel.to_json()) != raw['panel.json']:
         raise ValueError('panel does not round-trip')
+    _check_panel(config, raw['panel.json'])
     llm = read_json(raw['llm.json'])
     check_record(llm, config['llm']['brief'], config['llm']['n'])
     report = read_json((out / 'report.json').read_bytes())
@@ -171,10 +195,9 @@ def verify(out):
     with sqlite3.connect((out / 'state.sqlite').resolve().as_uri() + '?mode=ro', uri=True) as conn:
         if conn.execute('PRAGMA integrity_check').fetchone() != ('ok',) or conn.execute('PRAGMA foreign_key_check').fetchall():
             raise ValueError('database integrity failure')
-        triggers = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='trigger'")}
-        if {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")} != set(TABLES) or \
-                triggers != {f'{t}_no_{e}' for t in TABLES for e in ('update', 'delete')}:
-            raise ValueError('unexpected database schema or missing append-only triggers')
+        schema = conn.execute("SELECT name, sql FROM sqlite_master WHERE type IN ('table', 'trigger') ORDER BY name")
+        if schema.fetchall() != sorted(_ddl()):
+            raise ValueError('unexpected database schema or altered append-only triggers')
         nodes = [n for f in report['folds'] for n in f['nodes']]
         results = [r for f in report['folds'] for r in f['results']]
         checks = [

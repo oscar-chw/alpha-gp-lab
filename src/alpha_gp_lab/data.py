@@ -143,6 +143,11 @@ def synthetic_panel(seed, assets, industries, segments, start_date='2024-01-01',
                  'SYNTHETIC', tuple(regimes))
 
 
+def synthetic_from_config(data):
+    return synthetic_panel(data['seed'], data['assets'], data['industries'], data['segments'],
+                           data['start_date'], data.get('strength', 0.0025))
+
+
 def _read_symbol(path):
     with open(path, newline='', encoding='utf-8') as fh:
         reader = csv.DictReader(fh)

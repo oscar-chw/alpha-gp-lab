@@ -45,7 +45,10 @@ class Bundles(unittest.TestCase):
         out = self.tmp / 'run'
         store.run(self.raw, self.panel, self.llm, out)
         with sqlite3.connect(out / 'state.sqlite') as conn:
-            for sql in ("UPDATE nodes SET record = '{}'", 'DELETE FROM edges', "UPDATE selection SET record = '{}'"):
+            node = conn.execute('SELECT id, fold, generation FROM nodes LIMIT 1').fetchone()
+            for sql in ("UPDATE nodes SET record = '{}'", 'DELETE FROM edges', "UPDATE selection SET record = '{}'",
+                        f"INSERT OR REPLACE INTO nodes VALUES ('{node[0]}', {node[1]}, {node[2]}, '{{}}')",
+                        "REPLACE INTO selection VALUES (0, '{}')"):
                 with self.subTest(sql=sql), self.assertRaisesRegex(sqlite3.IntegrityError, 'append-only'):
                     conn.execute(sql)
 
@@ -84,8 +87,24 @@ class Bundles(unittest.TestCase):
             conn.execute('DROP TRIGGER edges_no_delete')
             conn.execute('DELETE FROM edges')
         rehash(db, 'state.sqlite')
-        with self.assertRaisesRegex(ValueError, 'schema or missing append-only triggers'):
+        with self.assertRaisesRegex(ValueError, 'altered append-only triggers'):
             store.verify(db)
+
+        neutered = self.tmp / 'neutered'   # same trigger name, body that does nothing
+        shutil.copytree(original, neutered)
+        with sqlite3.connect(neutered / 'state.sqlite') as conn:
+            conn.execute('DROP TRIGGER nodes_no_update')
+            conn.execute('CREATE TRIGGER nodes_no_update BEFORE UPDATE ON nodes BEGIN SELECT 1; END')
+        rehash(neutered, 'state.sqlite')
+        with self.assertRaisesRegex(ValueError, 'altered append-only triggers'):
+            store.verify(neutered)
+
+    def test_synthetic_panel_must_match_its_config(self):
+        other = copy.deepcopy(self.config)
+        other['data']['seed'] += 1
+        with self.assertRaisesRegex(ValueError, 'does not match the synthetic data config'):
+            store.run(canonical(other), self.panel, self.llm, self.tmp / 'mismatch')
+        self.assertFalse((self.tmp / 'mismatch').exists())
 
     def test_interrupted_run_is_kept_and_refused(self):
         out = self.tmp / 'interrupted'

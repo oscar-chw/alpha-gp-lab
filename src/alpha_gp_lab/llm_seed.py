@@ -23,7 +23,7 @@ from .grammar import canonical, grammar_doc, parse
 
 log = logging.getLogger(__name__)
 FIXTURE_SOURCE = 'HAND-WRITTEN FIXTURE (not real LLM output)'
-_BULLET = re.compile(r'^(?:[-*]\s+|\d+[.)]\s*)')   # '- x', '* x', '1. x'; never the minus of '-x'
+_BULLET = re.compile(r'^(?:\*\s+|\d+[.)]\s*)')   # '* x', '1. x', '2) x'
 
 
 def build_prompt(brief, n):
@@ -44,6 +44,11 @@ def parse_response(text):
     for raw in text.splitlines():
         line = _BULLET.sub('', raw.strip().strip('`').strip()).strip()
         if not line or line.startswith('#'):
+            continue
+        if line.startswith('- '):
+            # A '- ' bullet and a unary minus look the same; guessing could flip the sign.
+            log.warning('rejected LLM proposal %r: ambiguous leading "- "', line)
+            rejected.append(dict(line=line, reason='ambiguous leading "- " (bullet or minus?)'))
             continue
         try:
             tree = parse(line)

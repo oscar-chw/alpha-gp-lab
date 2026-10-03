@@ -4,7 +4,7 @@ import json
 import math
 
 from .data import REGIMES
-from .grammar import MAX_DEPTH, MAX_WINDOW
+from .grammar import MAX_DEPTH, MAX_WINDOW, parse
 
 
 def canonical(obj):
@@ -138,11 +138,15 @@ def validate(config):
     _num(fit['complexity_penalty'], 0, 1, 'fitness.complexity_penalty')
 
     sel = config['selection']
-    _keys(sel, ['min_ic', 'max_turnover', 'max_corr', 'select_k'], where='selection')
+    _keys(sel, ['min_ic', 'max_turnover', 'max_corr', 'select_k', 'existing_alphas'], where='selection')
     _num(sel['min_ic'], -1, 1, 'selection.min_ic')
     _num(sel['max_turnover'], 0, 2, 'selection.max_turnover')
     _num(sel['max_corr'], 0, 1, 'selection.max_corr')
     _int(sel['select_k'], 1, 50, 'selection.select_k')
+    if not isinstance(sel['existing_alphas'], list) or len(sel['existing_alphas']) > 50:
+        raise ValueError('selection.existing_alphas must be a list of at most 50 expressions')
+    for expr in sel['existing_alphas']:
+        parse(expr)
 
     llm = config['llm']
     _keys(llm, ['brief', 'n', 'replay', 'use_seeds'], where='llm')

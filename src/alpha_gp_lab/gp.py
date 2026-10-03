@@ -3,7 +3,7 @@
 * train      — fitness for tournaments, elitism, the duplicate/equivalence filter and the
                hall of fame. Every GP decision reads only an Evaluator built on train dates.
 * validation — re-scores the hall of fame, applies the qualification rule and the
-               correlation filter, and picks the final alpha.
+               correlation filter against already-selected alphas, and picks the final alpha.
 * test       — scores the final pick, once. Nothing reads it back.
 
 All randomness comes from one ``random.Random`` seeded from (config seed, fold), so a config
@@ -223,14 +223,18 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
         if s is not None and m['mean_ic'] >= sel['min_ic'] and m['mean_turnover'] <= sel['max_turnover']:
             qualified.append((s, p, m))
     qualified.sort(key=lambda x: (-x[0], x[1]['record']['expression'], x[1]['record']['id']))
+    # Correlation filter: against alphas selected before this run (config existing_alphas) and
+    # against those already shortlisted. Only the existing alphas can change the final pick.
+    existing = [parse(e) for e in sel['existing_alphas']]
     shortlist = []
     for s, p, m in qualified:
         if len(shortlist) == sel['select_k']:
             break
-        corrs = [val.correlation(p['tree'], q['tree'], vs, ve) for _, q, _ in shortlist]
+        selected = existing + [q['tree'] for _, q, _ in shortlist]
+        corrs = [val.correlation(p['tree'], q, vs, ve) for q in selected]
         worst = max((abs(c) for c in corrs if c is not None), default=0.0)
         entry = dict(id=p['record']['id'], expression=p['record']['expression'], validation_score=s,
-                     validation=m, max_abs_corr_to_shortlist=worst)
+                     validation=m, max_abs_corr_to_selected=worst)
         if worst > sel['max_corr']:
             report['correlation_rejected'].append(entry)
         else:

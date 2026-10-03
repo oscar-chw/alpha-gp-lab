@@ -88,6 +88,9 @@ erDiagram
     }
 ```
 
-Every table has `BEFORE UPDATE` and `BEFORE DELETE` triggers that abort, and each generation
+Every table has `BEFORE UPDATE` and `BEFORE DELETE` triggers that abort, plus a `BEFORE INSERT`
+trigger that aborts when the key already exists (otherwise `INSERT OR REPLACE` would delete
+and rewrite a row without firing the delete trigger). `verify` compares the stored schema
+and trigger SQL with the expected DDL, so a renamed or emptied trigger is caught. Each generation
 is committed before the next one starts, so an interrupted run leaves its finished
 generations on disk and no `completion.json`; such a directory is refused for reuse.

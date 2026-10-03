@@ -48,9 +48,12 @@ abstains into cash.
   distinct signal).
 - *Validation* re-scores the hall of fame, keeps candidates with IC >= `min_ic` and turnover
   <= `max_turnover`, ranks them by the same penalised fitness, and builds a shortlist with a
-  correlation filter: a candidate whose mean cross-sectional signal correlation with an
-  already-selected alpha exceeds `max_corr` is rejected. The top of the shortlist is the final
-  pick.
+  correlation filter: a candidate is rejected if its mean cross-sectional signal correlation
+  exceeds `max_corr` with an already-selected alpha, meaning one listed in the config's
+  `existing_alphas` (alphas chosen before this run) or one already on the shortlist. The top
+  of the shortlist is the final pick. The shipped configs list no existing alphas, so there
+  the filter only shapes the shortlist and the pick is the best validation score; a test
+  shows an existing alpha pushing the pick elsewhere.
 - *Test* scores only that final pick, once.
 
 Each evaluator is built on the panel truncated at its split's last label, so later bars do not
@@ -62,7 +65,8 @@ and reruns the whole search per fold, with no shared state; the report gives eac
 **LLM seed proposer** (`src/alpha_gp_lab/llm_seed.py`). A prompt containing a short research
 brief and the grammar (never data) asks for N expressions. Responses are cached in a JSON
 replay file keyed by the SHA-256 of the exact prompt. Every proposed line is parsed; invalid
-lines are logged, rejected and counted. The demo and the tests read only the replay file.
+lines are logged, rejected and counted (a line starting `- ` is rejected too, because a list
+bullet and a minus sign cannot be told apart). The demo and the tests read only the replay file.
 `seeds --live` would call the local `claude -p` CLI to refresh the cache; it has not been
 run. The shipped replay entry is labelled **HAND-WRITTEN FIXTURE (not real LLM output)**. It
 was written while building this repo, by someone who knew how the synthetic data is
@@ -85,9 +89,11 @@ endpoint URL anywhere in the package.
 **Persistence and replay** (`src/alpha_gp_lab/store.py`). Each run writes a fresh directory:
 exact config bytes, the panel, the LLM seed record, the code hashes, an append-only SQLite
 lineage (nodes, parent edges, per-split results, selections, LLM verdicts; triggers abort any
-UPDATE or DELETE), the report, and last a hash manifest. `verify` checks the hashes, the code
-identity and the inputs, recomputes the entire experiment and compares it byte for byte, then
-reads every SQLite row back. A directory without the manifest (an interrupted run) is kept
+UPDATE, DELETE or key-colliding INSERT, so `INSERT OR REPLACE` cannot rewrite a row either),
+the report, and last a hash manifest. `verify` checks the hashes, the code and platform
+identity, the inputs (a synthetic panel must be exactly what its config generates), compares
+the stored schema and trigger SQL with the expected DDL, recomputes the entire experiment and
+compares it byte for byte, then reads every SQLite row back. A directory without the manifest (an interrupted run) is kept
 but refused for reuse.
 
 ## Results (real numbers with their source; synthetic clearly labelled)
@@ -103,7 +109,8 @@ Config: `fixtures/demo_config.json`. Search seed 20261003, data seed 11, 40 asse
 4 industries, 300 days: 240 days `reversal`, then 60 days `adverse`. Splits by date index:
 train [30, 180], validation [181, 239], test [240, 299]. GP: population 64, 10 generations,
 tournament 4, elitism 4, max depth 6, max 15 nodes, hall of fame 16. Fitness penalties:
-turnover 0.02, complexity 0.001. Selection: min IC 0.02, max turnover 1.6, max correlation 0.7.
+turnover 0.02, complexity 0.001. Selection: min IC 0.02, max turnover 1.6, max correlation 0.7,
+no existing alphas.
 
 | Field (printed) | Value |
 |---|---|
@@ -172,10 +179,10 @@ chosen on a validation window that was partly momentum and then tested on pure n
 
 ### Tests and runtime
 
-- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 58 tests` and `OK`.
+- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 59 tests` and `OK`.
 - `python3.11 tests/hand_cases.py` re-derives the evaluator's arithmetic in exact Fractions:
   for example IC 2/5, turnover 2, gross 1/20 and net 49/1000 on a four-asset case.
-- On the development machine the demo printed `demo finished in 9.7s` to stderr, and
+- On the development machine the demo printed `demo finished in 9.6s` to stderr on its last run, and
   `scripts/check.sh` (tests, hand cases, the three runs above and two replays) exited 0.
   Runtime varies by machine.
 
@@ -241,6 +248,9 @@ Diagrams of the data flow, the split roles and the lineage schema are in
   40 assets. Universes of thousands of instruments would need vectorised code.
 - **Correlation filter scope.** It compares candidates within one run; there is no persistent
   library of previously selected alphas.
+- **Replay is platform-bound.** The code identity includes the Python version and platform, and
+  `verify` refuses a bundle written elsewhere, because maths-library differences can change
+  low-order float bits. The numbers above were produced on one machine only.
 - **Replay is not a signature.** `verify` detects accidental or casual alteration, but someone
   who controls the code and every file can forge a consistent bundle.
 - The Binance fetcher and the live LLM path are only tested offline, against fakes.

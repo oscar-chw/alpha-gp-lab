@@ -33,11 +33,12 @@ class Replay(unittest.TestCase):
         check_record(record, llm['brief'], llm['n'])
 
     def test_parse_response_validates_every_line(self):
-        text = '```\n1. -returns\n- rank(close)\n* ts_mean(volume, 5)\n# a comment\n\nrank(vwap)\n2) -returns\n```'
+        text = '```\n1. -returns\n* rank(close)\n2) ts_mean(volume, 5)\n# a comment\n\nrank(vwap)\n- returns\n3. -returns\n```'
         with self.assertLogs('alpha_gp_lab.llm_seed', 'WARNING') as logs:
             accepted, rejected, duplicates = parse_response(text)
         self.assertEqual(accepted, ['-returns', 'rank(close)', 'ts_mean(volume, 5)'])
-        self.assertEqual([r['line'] for r in rejected], ['rank(vwap)'])
+        # '- returns' is a bullet or a negation; it is rejected rather than guessed.
+        self.assertEqual([r['line'] for r in rejected], ['rank(vwap)', '- returns'])
         self.assertEqual(duplicates, 1)
         self.assertIn('rank(vwap)', logs.output[0])
 

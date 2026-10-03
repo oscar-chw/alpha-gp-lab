@@ -69,7 +69,8 @@
     "min_ic": 0.02,
     "max_turnover": 1.6,
     "max_corr": 0.7,
-    "select_k": 3
+    "select_k": 3,
+    "existing_alphas": []
   },
   "llm": {
     "brief": "Daily bars for a cross-section of equities grouped into industries. Look for short-horizon reversal and momentum effects, industry-relative variants and volume-conditioned signals. Prefer simple, low-turnover expressions.",

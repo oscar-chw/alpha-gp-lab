@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 
 from alpha_gp_lab.config import canonical  # noqa: E402
-from alpha_gp_lab.data import Panel, synthetic_panel  # noqa: E402
+from alpha_gp_lab.data import Panel, synthetic_from_config  # noqa: E402
 from alpha_gp_lab.llm_seed import FIXTURE_SOURCE, build_prompt, prompt_sha256, propose  # noqa: E402
 
 SEEDS = '-returns\ngroup_neutralize(-returns, industry)\nts_mean(returns, 5)\nrank(vwap)\n'
@@ -33,8 +33,7 @@ def write_replay(folder, config, response=SEEDS):
 
 
 def panel_for(config):
-    d = config['data']
-    return synthetic_panel(d['seed'], d['assets'], d['industries'], d['segments'], d['start_date'], d['strength'])
+    return synthetic_from_config(config['data'])
 
 
 def inputs(config, folder, response=SEEDS):

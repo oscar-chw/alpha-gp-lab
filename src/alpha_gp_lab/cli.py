@@ -7,7 +7,7 @@ import time
 
 from . import store
 from .config import read_json, validate
-from .data import load_csv_dir, synthetic_panel
+from .data import load_csv_dir, synthetic_from_config
 from .llm_seed import propose
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,8 +22,7 @@ def load_inputs(config_path, live=False):
     config = validate(read_json(raw))
     data = config['data']
     if data['kind'] == 'synthetic':
-        panel = synthetic_panel(data['seed'], data['assets'], data['industries'], data['segments'],
-                                data['start_date'], data.get('strength', 0.0025))
+        panel = synthetic_from_config(data)
     else:
         panel, dropped = load_csv_dir(config_path.parent / data['path'])
         if any(dropped.values()):
