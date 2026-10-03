@@ -1,0 +1,136 @@
+{
+  "data": "CSV:binance-daily",
+  "folds": [
+    {
+      "baselines": {
+        "momentum_20d": {
+          "expression": "(close / ts_delay(close, 20))",
+          "test": {
+            "ic_tstat": -0.5588498549217263,
+            "intervals": 607,
+            "mean_gross": 0.0003768912600628651,
+            "mean_ic": -0.006158512090458223,
+            "mean_net": 7.23017820582705e-05,
+            "mean_turnover": 0.3045894780045946,
+            "net_tstat": 0.1835034941876255,
+            "sum_net": 0.04388718170937019,
+            "valid_ic_intervals": 607
+          },
+          "validation": {
+            "ic_tstat": -1.2183089991856972,
+            "intervals": 365,
+            "mean_gross": 0.001002139977275883,
+            "mean_ic": -0.017496146192444408,
+            "mean_net": 0.0006836112765127413,
+            "mean_turnover": 0.3185287007631417,
+            "net_tstat": 1.291498090082651,
+            "sum_net": 0.24951811592715056,
+            "valid_ic_intervals": 365
+          }
+        },
+        "reversal_1d": {
+          "expression": "-returns",
+          "test": {
+            "ic_tstat": 1.1150804633424585,
+            "intervals": 607,
+            "mean_gross": -0.0002194546543761369,
+            "mean_ic": 0.011485586060223782,
+            "mean_net": -0.0015298070676223413,
+            "mean_turnover": 1.3103524132462043,
+            "net_tstat": -4.090451699976516,
+            "sum_net": -0.9285928900467612,
+            "valid_ic_intervals": 607
+          },
+          "validation": {
+            "ic_tstat": 0.95077148257517,
+            "intervals": 365,
+            "mean_gross": -0.0004089653481307361,
+            "mean_ic": 0.012864710545246051,
+            "mean_net": -0.001741581359885962,
+            "mean_turnover": 1.3326160117552257,
+            "net_tstat": -3.476151383135997,
+            "sum_net": -0.6356771963583762,
+            "valid_ic_intervals": 365
+          }
+        }
+      },
+      "correlation_rejected": 14,
+      "fold": 0,
+      "occurrences": 640,
+      "regimes": {
+        "test": null,
+        "train": null,
+        "validation": null
+      },
+      "rejected": {
+        "rejected_degenerate": 28,
+        "rejected_duplicate": 143,
+        "rejected_equivalent": 184,
+        "rejected_limits": 17
+      },
+      "selected": "abs(ts_decay_linear((low / close), 10))",
+      "selected_origin": {
+        "generation": 6,
+        "operation": "crossover"
+      },
+      "shortlist": [
+        "abs(ts_decay_linear((low / close), 10))",
+        "ts_sum((low / open), 20)"
+      ],
+      "split_dates": {
+        "test": [
+          "2025-01-01",
+          "2026-08-31"
+        ],
+        "train": [
+          "2020-01-01",
+          "2023-12-31"
+        ],
+        "validation": [
+          "2024-01-01",
+          "2024-12-31"
+        ]
+      },
+      "status": "SELECTED",
+      "test": {
+        "ic_tstat": 7.106267209479283,
+        "intervals": 607,
+        "mean_gross": 0.0003534791635240535,
+        "mean_ic": 0.08208763518369619,
+        "mean_net": 8.049329508034882e-05,
+        "mean_turnover": 0.27298586844370465,
+        "net_tstat": 0.2184396051637011,
+        "sum_net": 0.04885943011377173,
+        "valid_ic_intervals": 607
+      },
+      "unique_expressions": 487,
+      "validation": {
+        "ic_tstat": 4.057330292521756,
+        "intervals": 365,
+        "mean_gross": -0.00014759565817287003,
+        "mean_ic": 0.07148111461736868,
+        "mean_net": -0.00041132983838806654,
+        "mean_turnover": 0.2637341802151965,
+        "net_tstat": -0.6699945071164971,
+        "sum_net": -0.15013539101164428,
+        "valid_ic_intervals": 365
+      },
+      "validation_candidates": 16
+    }
+  ],
+  "llm": {
+    "accepted": 0,
+    "rejected": 0,
+    "source": "none: use_seeds is false, no LLM output read",
+    "used_as_seeds": false
+  },
+  "mode": "single",
+  "name": "binance-daily-34-main",
+  "summary": {
+    "folds": 1,
+    "folds_selected": 1,
+    "folds_test_ic_negative": 0,
+    "folds_test_ic_positive": 1,
+    "mean_test_ic": 0.08208763518369619
+  }
+}

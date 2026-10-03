@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """Download Binance public spot daily (1d) klines and write the CSV layout ``load_csv_dir`` reads.
 
-NOT RUN YET: downloading waits for the repository owner's permission. Nothing in the tests or
-the demo calls ``fetch``; the tests exercise URL building, checksum verification and the
-kline conversion offline with in-memory archives.
+It was run once, with permission, for the 34 USDT pairs pinned in
+``fixtures/binance_universe.json`` (2020-01 to 2026-08); ``python3.11 -m alpha_gp_lab verify-data``
+checks a download against the pinned SHA-256s. The downloaded CSVs are never committed. Nothing
+in the tests or the demo calls ``fetch``; the tests exercise URL building, checksum verification
+and the kline conversion offline with in-memory archives.
 
 Source: the public bulk-data archive at data.binance.vision. Each archive has a sibling
 ``.CHECKSUM`` file ("<sha256>  <file name>"); an archive whose SHA-256 does not match is
 refused and nothing is written for it.
 
-    python3 scripts/fetch_binance_daily.py --symbols BTCUSDT,ETHUSDT --start 2024-01 --end 2024-06 --out data/binance
+    python3 scripts/fetch_binance_daily.py --symbols BTCUSDT,ETHUSDT --start 2024-01 --end 2024-06 --out data/binance-daily
 
-writes ``data/binance/BTCUSDT.csv`` (date,open,high,low,close,volume), one row per UTC day.
+writes ``data/binance-daily/BTCUSDT.csv`` (date,open,high,low,close,volume), one row per UTC day.
 """
 import argparse
 import csv

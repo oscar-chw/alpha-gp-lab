@@ -8,7 +8,7 @@ flowchart LR
         CFG[config JSON<br/>seed, splits or walk_forward,<br/>GP budget, penalties]
         SYN[data.synthetic_panel<br/>SYNTHETIC regimes]
         CSV[data.load_csv_dir<br/>daily OHLCV CSVs]
-        BIN[scripts/fetch_binance_daily.py<br/>not run yet]
+        BIN[scripts/fetch_binance_daily.py<br/>pinned by fixtures/binance_universe.json]
         LLM[llm_seed.propose<br/>replay file by default<br/>--live: claude -p]
     end
     BIN -. writes .-> CSV
@@ -45,12 +45,12 @@ selection to come out byte-identical.
 |---|---|
 | `grammar.py` | AST-based parser (no `eval`), frozen `Node` trees, canonical form for duplicate detection, the five industry-relative templates, the grammar text sent to the LLM |
 | `evaluate.py` | Local operator semantics, the delay-1 timing contract, rank IC, rebalancing turnover, net return, fitness, signal fingerprints and pairwise signal correlation |
-| `gp.py` | Random trees, crossover, mutation, the generation loop, hall of fame, validation selection with the correlation filter, walk-forward folds |
-| `data.py` | `Panel`, the SYNTHETIC multi-regime generator, the CSV-directory loader |
+| `gp.py` | Random trees, crossover, mutation, the generation loop, hall of fame, validation selection with the correlation filter, fixed baseline expressions scored on the same splits, walk-forward folds |
+| `data.py` | `Panel`, the SYNTHETIC multi-regime generator, the CSV-directory loader, the pinned-universe check behind `verify-data` |
 | `llm_seed.py` | Prompt, prompt-hash replay cache, grammar validation of every proposed line, optional live refresh through `claude -p` |
 | `store.py` | Run bundle writer, append-only SQLite schema with triggers, completion manifest, `verify` replay |
-| `config.py` | Strict config validation and fold construction |
-| `cli.py` | `demo`, `walkforward`, `run`, `verify`, `seeds` |
+| `config.py` | Strict config validation and fold construction (index or ISO-date spans; one fold, a listed set, or rolling) |
+| `cli.py` | `demo`, `walkforward`, `run`, `verify`, `seeds`, `verify-data` |
 
 ## Lineage record
 
