@@ -1,0 +1,599 @@
+{
+ "basket_return": {
+  "test": -0.6583221817986623,
+  "train": 9.964640922995248,
+  "validation": 0.5216784096677134
+ },
+ "constant_rankings": {
+  "frozen_validation_rank": {
+   "ic": {
+    "bootstrap": {
+     "high": 0.09061421469815734,
+     "low": 0.05219890901879186,
+     "share_at_or_below_zero": 0.0
+    },
+    "days": 607,
+    "mean": 0.07141931398287664,
+    "newey_west_tstat": 6.143448342958693,
+    "tstat": 5.292460950993847
+   },
+   "rule": "the pick's mean cross-sectional rank over validation, frozen",
+   "scores": {
+    "ADAUSDT": 0.5921129099211291,
+    "ALGOUSDT": 0.4054794520547945,
+    "ATOMUSDT": 0.6363636363636364,
+    "BATUSDT": 0.4976338729763387,
+    "BCHUSDT": 0.5535076795350768,
+    "BNBUSDT": 0.8518887505188875,
+    "BTCUSDT": 0.9028642590286426,
+    "CHZUSDT": 0.32453300124533,
+    "DASHUSDT": 0.5710253217102532,
+    "DOGEUSDT": 0.406392694063927,
+    "ENJUSDT": 0.2782897467828975,
+    "ETCUSDT": 0.6106268161062681,
+    "ETHUSDT": 0.7975093399750934,
+    "FETUSDT": 0.15367372353673725,
+    "HBARUSDT": 0.4363636363636364,
+    "ICXUSDT": 0.4017434620174346,
+    "IOSTUSDT": 0.4904109589041096,
+    "IOTAUSDT": 0.3282689912826899,
+    "LINKUSDT": 0.518472395184724,
+    "LTCUSDT": 0.7357409713574098,
+    "NEOUSDT": 0.4410958904109589,
+    "ONEUSDT": 0.17600664176006645,
+    "ONTUSDT": 0.36230801162308013,
+    "QTUMUSDT": 0.46691573266915737,
+    "RVNUSDT": 0.35691158156911584,
+    "THETAUSDT": 0.24798671647986717,
+    "TRXUSDT": 0.9412204234122042,
+    "VETUSDT": 0.45097550850975504,
+    "XLMUSDT": 0.7787463677874636,
+    "XRPUSDT": 0.6932337069323371,
+    "XTZUSDT": 0.5665421336654213,
+    "ZECUSDT": 0.36836861768368623,
+    "ZILUSDT": 0.3960979659609796,
+    "ZRXUSDT": 0.26068908260689083
+   }
+  },
+  "low_train_beta": {
+   "ic": {
+    "bootstrap": {
+     "high": 0.08498342352540561,
+     "low": 0.04740953299980588,
+     "share_at_or_below_zero": 0.0
+    },
+    "days": 607,
+    "mean": 0.06646259301557508,
+    "newey_west_tstat": 6.0126681840119,
+    "tstat": 5.254277730250806
+   },
+   "rule": "minus each coin's beta to the equal-weighted market over train"
+  }
+ },
+ "icir": {
+  "gp_pick": 0.2884344884419484,
+  "momentum_20d": -0.022683015888452167,
+  "random_search_pick": 0.275145236218481,
+  "range_10d": 0.2890319701865899,
+  "reversal_1d": 0.045259719840926214
+ },
+ "largest_negative_contributor": "ZECUSDT",
+ "legs": {
+  "all": [
+   {
+    "contribution_to_mean_gross": 0.0001787327522670849,
+    "days_long": 25,
+    "days_short": 582,
+    "mean_weight": -0.0366970123643992,
+    "symbol": "ONEUSDT",
+    "test_return": -0.9721341023792358
+   },
+   {
+    "contribution_to_mean_gross": -0.0004472277876573619,
+    "days_long": 105,
+    "days_short": 502,
+    "mean_weight": -0.034165987356275976,
+    "symbol": "ZECUSDT",
+    "test_return": 13.56715905187221
+   },
+   {
+    "contribution_to_mean_gross": -2.2719357657969668e-05,
+    "days_long": 89,
+    "days_short": 518,
+    "mean_weight": -0.02985070372756138,
+    "symbol": "FETUSDT",
+    "test_return": -0.8836239575435936
+   },
+   {
+    "contribution_to_mean_gross": 7.751500819348616e-05,
+    "days_long": 52,
+    "days_short": 555,
+    "mean_weight": -0.028921521123227857,
+    "symbol": "THETAUSDT",
+    "test_return": -0.9281953290870488
+   },
+   {
+    "contribution_to_mean_gross": 3.588755565893803e-05,
+    "days_long": 163,
+    "days_short": 444,
+    "mean_weight": -0.018797421090734966,
+    "symbol": "ENJUSDT",
+    "test_return": -0.8877233165368759
+   },
+   {
+    "contribution_to_mean_gross": 4.2443241837774e-05,
+    "days_long": 154,
+    "days_short": 453,
+    "mean_weight": -0.017013162470143596,
+    "symbol": "IOTAUSDT",
+    "test_return": -0.8750780762023735
+   },
+   {
+    "contribution_to_mean_gross": 2.5211628521183375e-05,
+    "days_long": 230,
+    "days_short": 377,
+    "mean_weight": -0.012789086949829841,
+    "symbol": "DASHUSDT",
+    "test_return": 0.1393401015228426
+   },
+   {
+    "contribution_to_mean_gross": 1.1858308691540812e-06,
+    "days_long": 196,
+    "days_short": 411,
+    "mean_weight": -0.01162618356771917,
+    "symbol": "LINKUSDT",
+    "test_return": -0.4788311090658077
+   },
+   {
+    "contribution_to_mean_gross": 0.00012617575492319488,
+    "days_long": 222,
+    "days_short": 385,
+    "mean_weight": -0.011420965323817287,
+    "symbol": "ALGOUSDT",
+    "test_return": -0.7729442970822281
+   },
+   {
+    "contribution_to_mean_gross": 6.094066250248776e-05,
+    "days_long": 232,
+    "days_short": 375,
+    "mean_weight": -0.010343569543332402,
+    "symbol": "CHZUSDT",
+    "test_return": -0.8461716937354988
+   },
+   {
+    "contribution_to_mean_gross": 6.385325731855042e-05,
+    "days_long": 237,
+    "days_short": 370,
+    "mean_weight": -0.009186366667996784,
+    "symbol": "DOGEUSDT",
+    "test_return": -0.7451788515363085
+   },
+   {
+    "contribution_to_mean_gross": 8.067815609894386e-05,
+    "days_long": 224,
+    "days_short": 383,
+    "mean_weight": -0.008462402307565143,
+    "symbol": "ADAUSDT",
+    "test_return": -0.7855129039253959
+   },
+   {
+    "contribution_to_mean_gross": 1.7586438081888014e-05,
+    "days_long": 244,
+    "days_short": 363,
+    "mean_weight": -0.0073964075406303615,
+    "symbol": "ZRXUSDT",
+    "test_return": -0.7989440337909186
+   },
+   {
+    "contribution_to_mean_gross": 9.069258316291987e-05,
+    "days_long": 282,
+    "days_short": 325,
+    "mean_weight": -0.006695245207298929,
+    "symbol": "BATUSDT",
+    "test_return": -0.7188274153592074
+   },
+   {
+    "contribution_to_mean_gross": 5.764694119458842e-05,
+    "days_long": 210,
+    "days_short": 397,
+    "mean_weight": -0.0066325396327733535,
+    "symbol": "VETUSDT",
+    "test_return": -0.8560986066452304
+   },
+   {
+    "contribution_to_mean_gross": -1.2943736075519727e-05,
+    "days_long": 290,
+    "days_short": 317,
+    "mean_weight": -0.005595047399713835,
+    "symbol": "ONTUSDT",
+    "test_return": -0.7795626576955424
+   },
+   {
+    "contribution_to_mean_gross": -3.96170907722331e-05,
+    "days_long": 262,
+    "days_short": 345,
+    "mean_weight": -0.004973692161233134,
+    "symbol": "ICXUSDT",
+    "test_return": -0.9419475655430711
+   },
+   {
+    "contribution_to_mean_gross": -6.341728801472077e-07,
+    "days_long": 276,
+    "days_short": 331,
+    "mean_weight": -0.0031210274593411356,
+    "symbol": "NEOUSDT",
+    "test_return": -0.8578690807799443
+   },
+   {
+    "contribution_to_mean_gross": 2.888116283274815e-07,
+    "days_long": 288,
+    "days_short": 319,
+    "mean_weight": -0.0026991899579872653,
+    "symbol": "ZILUSDT",
+    "test_return": -0.8779613025011798
+   },
+   {
+    "contribution_to_mean_gross": -4.2546060976094754e-05,
+    "days_long": 329,
+    "days_short": 278,
+    "mean_weight": 0.00044178927506655324,
+    "symbol": "RVNUSDT",
+    "test_return": -0.8571428571428571
+   },
+   {
+    "contribution_to_mean_gross": 3.866389615690324e-06,
+    "days_long": 340,
+    "days_short": 267,
+    "mean_weight": 0.003018418337390194,
+    "symbol": "HBARUSDT",
+    "test_return": -0.7502374491180461
+   },
+   {
+    "contribution_to_mean_gross": -2.2983928102737248e-05,
+    "days_long": 372,
+    "days_short": 235,
+    "mean_weight": 0.003719580670721627,
+    "symbol": "QTUMUSDT",
+    "test_return": -0.7377153797064455
+   },
+   {
+    "contribution_to_mean_gross": -8.125290902811011e-06,
+    "days_long": 368,
+    "days_short": 239,
+    "mean_weight": 0.0063703163211209475,
+    "symbol": "IOSTUSDT",
+    "test_return": -0.9130239520958083
+   },
+   {
+    "contribution_to_mean_gross": -4.280175650099856e-05,
+    "days_long": 374,
+    "days_short": 233,
+    "mean_weight": 0.008462402307565143,
+    "symbol": "XLMUSDT",
+    "test_return": -0.5836073273837482
+   },
+   {
+    "contribution_to_mean_gross": 1.7534790410876966e-05,
+    "days_long": 403,
+    "days_short": 204,
+    "mean_weight": 0.010503183733033867,
+    "symbol": "XTZUSDT",
+    "test_return": -0.844403803950256
+   },
+   {
+    "contribution_to_mean_gross": 4.02347385428805e-05,
+    "days_long": 434,
+    "days_short": 173,
+    "mean_weight": 0.012361548941700917,
+    "symbol": "ETCUSDT",
+    "test_return": -0.7179387834172801
+   },
+   {
+    "contribution_to_mean_gross": -3.46149745780432e-07,
+    "days_long": 391,
+    "days_short": 216,
+    "mean_weight": 0.013131117356332978,
+    "symbol": "BCHUSDT",
+    "test_return": -0.451276359600444
+   },
+   {
+    "contribution_to_mean_gross": 2.169662361793609e-06,
+    "days_long": 435,
+    "days_short": 172,
+    "mean_weight": 0.013364838134110121,
+    "symbol": "ATOMUSDT",
+    "test_return": -0.7754696807698183
+   },
+   {
+    "contribution_to_mean_gross": -2.1399928967075752e-05,
+    "days_long": 405,
+    "days_short": 202,
+    "mean_weight": 0.013889284757414935,
+    "symbol": "ETHUSDT",
+    "test_return": -0.2656634071146715
+   },
+   {
+    "contribution_to_mean_gross": -1.5325374100441302e-05,
+    "days_long": 433,
+    "days_short": 174,
+    "mean_weight": 0.015405619559578846,
+    "symbol": "XRPUSDT",
+    "test_return": -0.4085219478737998
+   },
+   {
+    "contribution_to_mean_gross": 5.46492853715964e-05,
+    "days_long": 473,
+    "days_short": 134,
+    "mean_weight": 0.019167954031113366,
+    "symbol": "LTCUSDT",
+    "test_return": -0.5386735081717978
+   },
+   {
+    "contribution_to_mean_gross": 3.757200709102571e-05,
+    "days_long": 579,
+    "days_short": 28,
+    "mean_weight": 0.044244483334568444,
+    "symbol": "BNBUSDT",
+    "test_return": -0.023169077757685286
+   },
+   {
+    "contribution_to_mean_gross": -1.6422018006913804e-05,
+    "days_long": 601,
+    "days_short": 6,
+    "mean_weight": 0.04874788368685976,
+    "symbol": "BTCUSDT",
+    "test_return": -0.16925887542671514
+   },
+   {
+    "contribution_to_mean_gross": 3.17063202177531e-05,
+    "days_long": 601,
+    "days_short": 6,
+    "mean_weight": 0.05355911140500391,
+    "symbol": "TRXUSDT",
+    "test_return": 0.29972645564673694
+   }
+  ],
+  "long": [
+   {
+    "contribution_to_mean_gross": 3.17063202177531e-05,
+    "days_long": 601,
+    "days_short": 6,
+    "mean_weight": 0.05355911140500391,
+    "symbol": "TRXUSDT",
+    "test_return": 0.29972645564673694
+   },
+   {
+    "contribution_to_mean_gross": -1.6422018006913804e-05,
+    "days_long": 601,
+    "days_short": 6,
+    "mean_weight": 0.04874788368685976,
+    "symbol": "BTCUSDT",
+    "test_return": -0.16925887542671514
+   },
+   {
+    "contribution_to_mean_gross": 3.757200709102571e-05,
+    "days_long": 579,
+    "days_short": 28,
+    "mean_weight": 0.044244483334568444,
+    "symbol": "BNBUSDT",
+    "test_return": -0.023169077757685286
+   },
+   {
+    "contribution_to_mean_gross": 5.46492853715964e-05,
+    "days_long": 473,
+    "days_short": 134,
+    "mean_weight": 0.019167954031113366,
+    "symbol": "LTCUSDT",
+    "test_return": -0.5386735081717978
+   },
+   {
+    "contribution_to_mean_gross": -1.5325374100441302e-05,
+    "days_long": 433,
+    "days_short": 174,
+    "mean_weight": 0.015405619559578846,
+    "symbol": "XRPUSDT",
+    "test_return": -0.4085219478737998
+   }
+  ],
+  "short": [
+   {
+    "contribution_to_mean_gross": 0.0001787327522670849,
+    "days_long": 25,
+    "days_short": 582,
+    "mean_weight": -0.0366970123643992,
+    "symbol": "ONEUSDT",
+    "test_return": -0.9721341023792358
+   },
+   {
+    "contribution_to_mean_gross": -0.0004472277876573619,
+    "days_long": 105,
+    "days_short": 502,
+    "mean_weight": -0.034165987356275976,
+    "symbol": "ZECUSDT",
+    "test_return": 13.56715905187221
+   },
+   {
+    "contribution_to_mean_gross": -2.2719357657969668e-05,
+    "days_long": 89,
+    "days_short": 518,
+    "mean_weight": -0.02985070372756138,
+    "symbol": "FETUSDT",
+    "test_return": -0.8836239575435936
+   },
+   {
+    "contribution_to_mean_gross": 7.751500819348616e-05,
+    "days_long": 52,
+    "days_short": 555,
+    "mean_weight": -0.028921521123227857,
+    "symbol": "THETAUSDT",
+    "test_return": -0.9281953290870488
+   },
+   {
+    "contribution_to_mean_gross": 3.588755565893803e-05,
+    "days_long": 163,
+    "days_short": 444,
+    "mean_weight": -0.018797421090734966,
+    "symbol": "ENJUSDT",
+    "test_return": -0.8877233165368759
+   }
+  ]
+ },
+ "market_state": {
+  "gp_pick": {
+   "corr_ic_market": -0.6146972736700037,
+   "down_days": 307,
+   "expression": "abs(ts_decay_linear((low / close), 10))",
+   "mean_ic_down": 0.2495563390905968,
+   "mean_ic_up": -0.08928867181436544,
+   "up_days": 300
+  },
+  "random_search_pick": {
+   "corr_ic_market": -0.6346423347662516,
+   "down_days": 307,
+   "expression": "ts_decay_linear(-ts_std(returns, 5), 20)",
+   "mean_ic_down": 0.256730882295473,
+   "mean_ic_up": -0.10082170326892752,
+   "up_days": 300
+  },
+  "range_10d": {
+   "corr_ic_market": -0.6293938316863595,
+   "down_days": 307,
+   "expression": "-ts_mean(((close - low) / close), 10)",
+   "mean_ic_down": 0.25272300283583776,
+   "mean_ic_up": -0.09333874724196786,
+   "up_days": 300
+  }
+ },
+ "name": "binance-daily-34-diagnostics",
+ "neutralised_ic": {
+  "beta": {
+   "ic": {
+    "bootstrap": {
+     "high": 0.07272551075245136,
+     "low": 0.03450676661259085,
+     "share_at_or_below_zero": 0.0
+    },
+    "days": 607,
+    "mean": 0.05343541040798527,
+    "newey_west_tstat": 5.89375278489146,
+    "tstat": 5.978676709995927
+   },
+   "mean_ic_down": 0.0896061593129997,
+   "mean_ic_up": 0.016420677361853833
+  },
+  "beta_and_size": {
+   "ic": {
+    "bootstrap": {
+     "high": 0.06638642876650437,
+     "low": 0.031057323333706685,
+     "share_at_or_below_zero": 0.0
+    },
+    "days": 607,
+    "mean": 0.04891619670183484,
+    "newey_west_tstat": 5.463955273292906,
+    "tstat": 5.560112236456273
+   },
+   "mean_ic_down": 0.08569338306835912,
+   "mean_ic_up": 0.01128087598675834
+  },
+  "size": {
+   "ic": {
+    "bootstrap": {
+     "high": 0.09496666721203978,
+     "low": 0.057800073751231744,
+     "share_at_or_below_zero": 0.0
+    },
+    "days": 607,
+    "mean": 0.07675388861550311,
+    "newey_west_tstat": 7.173766872195277,
+    "tstat": 6.850138515127612
+   },
+   "mean_ic_down": 0.22960312345251987,
+   "mean_ic_up": -0.07966182836771071
+  }
+ },
+ "pick": "abs(ts_decay_linear((low / close), 10))",
+ "pick_gross": {
+  "bootstrap": {
+   "high": 0.0010446905029341692,
+   "low": -0.00043469547750141864,
+   "share_at_or_below_zero": 0.1678
+  },
+  "days": 607,
+  "mean": 0.0003534791635240535,
+  "newey_west_tstat": 0.9098209435426766,
+  "tstat": 0.9594540575661797
+ },
+ "pick_ic": {
+  "bootstrap": {
+   "high": 0.10035325365701847,
+   "low": 0.0636799402903561,
+   "share_at_or_below_zero": 0.0
+  },
+  "days": 607,
+  "mean": 0.08208763518369619,
+  "newey_west_tstat": 7.599252358060714,
+  "tstat": 7.106267209479283
+ },
+ "pick_net": {
+  "bootstrap": {
+   "high": 0.0007678056491314962,
+   "low": -0.0007064142854871428,
+   "share_at_or_below_zero": 0.3947
+  },
+  "days": 607,
+  "mean": 8.049329508034882e-05,
+  "newey_west_tstat": 0.20679410837004805,
+  "tstat": 0.2184396051637011
+ },
+ "post_hoc": true,
+ "short_borrow_break_even_per_year": 0.05876010540865464,
+ "test_dates": [
+  "2025-01-02",
+  "2026-08-31"
+ ],
+ "test_window_looks": {
+  "items": {
+   "follow-up: 19 more GP seeds, 20 random-search seeds, the range control": 40,
+   "main run: GP pick and 2 baselines": 3,
+   "sibling repo asof-research: 120 grid hypotheses on the same pairs and window": 120,
+   "these diagnostics: frozen ranking, train-beta ranking, 3 neutralised ICs": 5,
+   "walk-forward folds 2 and 3 (test windows inside this one): picks and baselines": 6
+  },
+  "neutralised_ic_bonferroni": {
+   "beta": 6.56888014922341e-07,
+   "beta_and_size": 8.102151758700063e-06,
+   "size": 1.269535575991541e-10
+  },
+  "pick_ic_bonferroni": {
+   "p_iid": 2.0744886320444036e-10,
+   "p_newey_west": 5.1825283722381045e-12
+  },
+  "total": 174
+ },
+ "without_largest_negative_contributor": {
+  "excluded": "ZECUSDT",
+  "gross": {
+   "bootstrap": {
+    "high": 0.0014388152744903935,
+    "low": 0.0002181314868460486,
+    "share_at_or_below_zero": 0.0055
+   },
+   "days": 607,
+   "mean": 0.0008490193616915224,
+   "newey_west_tstat": 2.3698611134962135,
+   "tstat": 2.477195744908383
+  },
+  "net": {
+   "bootstrap": {
+    "high": 0.0011588045824094673,
+    "low": -5.9203420650949554e-05,
+    "share_at_or_below_zero": 0.039
+   },
+   "days": 607,
+   "mean": 0.0005705887967142959,
+   "newey_west_tstat": 1.5900082165682752,
+   "tstat": 1.6640509082483605
+  }
+ }
+}
