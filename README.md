@@ -547,6 +547,12 @@ Diagrams of the data flow, the split roles and the lineage schema are in
   chosen in 2026. Coins that were delisted or collapsed between 2020 and 2026 are absent, and
   KNCUSDT is missing because its download failed. Every real-data number in this README is
   biased toward survivors.
+- **The test window is not an untouched holdout.** 2025-01-01 to 2026-08-31 was scored by the main
+  run and then again by this repo's follow-up analysis (20 GP and 20 random-search seeds, the
+  range-factor control, the bootstrap and the comparisons above). Across the portfolio, the sibling
+  repo asof-research ran its own pre-registered study on the same 34 pairs, splits, costs and
+  baselines, committed shortly after this repo's real-data results. Each analysis was fixed before
+  it ran, but repeated looks at one window weaken it as out-of-sample evidence.
 - **One venue.** Binance spot prices and volumes only, with no cross-check against other
   exchanges.
 - **Daily bars.** UTC close-to-close days. Delay 1 means a signal uses data through the close of
