@@ -668,39 +668,28 @@ Diagrams of the data flow, the split roles and the lineage schema are in
 
 ## What I learned
 
-Candidate lessons drawn from the real-data results above. None is Oscar's own conclusion until
-he confirms or rewrites it. They predate the post-hoc diagnostics, which put the gap between the
-pick's IC and its return mainly on single-name tails (gross t 0.96 before any fee), so lesson 1 in
-particular needs his rewrite.
+Lessons drawn from the real-data results above, confirmed by Oscar on 2026-10-03. They predate
+the post-hoc diagnostics, which later located the gap between the pick's IC and its return mainly
+in single-name tails (gross t 0.96 before any fee).
 
 1. A strong rank IC is not a tradable return. The main pick's test IC was 0.08208763518369619
    (t-stat 7.106267209479283), yet its net was 8.049329508034882e-05 per day with a t-stat of
    0.2184396051637011 after 10 bps per side.
 
-DRAFT — Oscar to confirm
-
 2. Selecting on IC-based fitness can choose a signal that lost money on validation (net
    -0.00041132983838806654 per day for the main pick). If net return is the goal, it has to be
    in the selection rule.
-
-DRAFT — Oscar to confirm
 
 3. Without diversity pressure the GP converges on one family: 14 of the 16 hall-of-fame
    members in the main run were near-copies of the pick's daily-range ratio, so "16 validation
    candidates" overstates how many different ideas were tested.
 
-DRAFT — Oscar to confirm
-
 4. A qualification rule needs a coverage check: walk-forward fold 1 selected a signal defined
    on 10 of 364 validation days.
-
-DRAFT — Oscar to confirm
 
 5. The textbook controls did poorly under delay 1 and 10 bps per side: 1-day reversal lost
    money on test (net t-stat -4.090451699976516) and 20-day momentum had a test IC of
    -0.006158512090458223. Beating them is a low bar, not a result.
-
-DRAFT — Oscar to confirm
 
 ## Attribution
 
