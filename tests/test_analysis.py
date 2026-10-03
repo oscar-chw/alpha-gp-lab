@@ -95,7 +95,8 @@ class Diagnostics(unittest.TestCase):
         d = Path(cls.a.tmp.name)
         cls.plan = dict(name='t', main_config='main.json', main_result='main_result.json', analysis_result='out.json',
                         market_state_signals=['gp_pick', 'range_5d'], beta_window=20, size_window=5, newey_west_lags=3,
-                        bootstrap=dict(block=5, reps=200, seed=1, level=0.9), test_window_looks={'a': 3, 'b': 4})
+                        bootstrap=dict(block=5, reps=200, seed=1, level=0.9), test_window_looks={'a': 3, 'b': 4},
+                        neutralised_references={'low_vol': '-ts_std(returns, 10)'})
         (d / 'diag.json').write_text(json.dumps(cls.plan))
         cls.proc = sh('scripts/diagnose_binance.py', '--config', str(d / 'diag.json'), '--out', str(d / 'diag_out.json'))
         cls.out = json.loads((d / 'diag_out.json').read_text()) if cls.proc.returncode == 0 else None
@@ -127,7 +128,12 @@ class Diagnostics(unittest.TestCase):
         self.assertEqual(looks['total'], 7)
         self.assertAlmostEqual(self.out['short_borrow_break_even_per_year'], self.a.main['test']['mean_net'] * 2 * 365, places=12)
         for k in ('beta', 'size', 'beta_and_size'):
-            self.assertEqual(self.out['neutralised_ic'][k]['ic']['days'], self.a.main['test']['intervals'])
+            v = self.out['neutralised_ic'][k]
+            self.assertEqual(v['ic']['days'], self.a.main['test']['intervals'])
+            self.assertEqual(v['days_up'] + v['days_down'], v['ic']['days'])
+            self.assertAlmostEqual((v['mean_ic_up'] * v['days_up'] + v['mean_ic_down'] * v['days_down']) / v['ic']['days'],
+                                   v['ic']['mean'], places=12)
+        self.assertEqual(sorted(self.out['neutralised_references_beta_and_size']), ['frozen_validation_rank', 'low_vol'])
 
     def test_a_different_committed_gross_is_refused(self):
         d = Path(self.a.tmp.name)

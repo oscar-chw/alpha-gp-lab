@@ -147,7 +147,9 @@ def main(argv=None):
         days = range(t - delay - sw + 1, t - delay + 1)
         return [math.log(mean([close[d][i] * volume[d][i] for d in days])) for i in range(n)]
 
+    refs = {name: ev.signal(parse(expr)) for name, expr in sorted(plan['neutralised_references'].items())}
     neutral = {k: [] for k in ('beta', 'size', 'beta_and_size')}
+    ref_neutral = {name: [] for name in list(refs) + ['frozen_validation_rank']}
     raw = []
     for t in test:
         s = rows[t - delay]
@@ -156,9 +158,23 @@ def main(argv=None):
         beta, size = trailing_beta(t), log_dollar_volume(t)
         for k, cols in (('beta', [beta]), ('size', [size]), ('beta_and_size', [beta, size])):
             neutral[k].append(spearman(residualise(rk, cols), residualise(labels[t], cols)))
+        # Reference rankings under the same beta-and-size neutralisation: is the residual a known effect?
+        cols, y = [beta, size], residualise(labels[t], [beta, size])
+        for name, r in refs.items():
+            ref_neutral[name].append(spearman(residualise(ranks(r[t - delay]), cols), y))
+        ref_neutral['frozen_validation_rank'].append(spearman(residualise(ranks(frozen), cols), y))
     up = [m > 0 for m in market[xs:xe]]
-    neutralised = {k: dict(ic=summary(v, plan), mean_ic_up=mean([x for x, u in zip(v, up) if u]),
-                           mean_ic_down=mean([x for x, u in zip(v, up) if not u])) for k, v in neutral.items()}
+
+    def by_state(v):
+        out = dict(ic=summary(v, plan))
+        for state, keep in (('up', True), ('down', False)):
+            xs_ = [x for x, u in zip(v, up) if u == keep]
+            out[f'mean_ic_{state}'], out[f'tstat_{state}'], out[f'days_{state}'] = mean(xs_), tstat(xs_), len(xs_)
+        return out
+
+    neutralised = {k: by_state(v) for k, v in neutral.items()}
+    neutralised_references = {name: dict(expression=plan['neutralised_references'].get(name, 'constant: ' + constant['frozen_validation_rank']['rule']),
+                                         **by_state(v)) for name, v in ref_neutral.items()}
 
     # 5. Who is in the book, and who made or lost the money (gross, before costs).
     coins = []
@@ -180,6 +196,7 @@ def main(argv=None):
         pick_ic=summary(raw, plan), pick_gross=summary(gross, plan), pick_net=summary(net, plan),
         icir={name: _icir(analysis['series'][name]['ic']) for name in analysis['table']},
         market_state=market_state, constant_rankings=constant, neutralised_ic=neutralised,
+        neutralised_references_beta_and_size=neutralised_references,
         legs=dict(long=coins[::-1][:5], short=coins[:5], all=coins),
         largest_negative_contributor=worst['symbol'],
         without_largest_negative_contributor=dict(excluded=worst['symbol'], gross=summary(g_ex, plan), net=summary(n_ex, plan)),
@@ -189,7 +206,7 @@ def main(argv=None):
                                neutralised_ic_bonferroni={k: bonferroni(two_sided_p(v['ic']['newey_west_tstat']), looks)
                                                           for k, v in neutralised.items()}))
     Path(args.out).write_text(json.dumps(report, indent=1, sort_keys=True) + '\n')
-    print(json.dumps({k: report[k] for k in ('basket_return', 'market_state', 'neutralised_ic', 'largest_negative_contributor',
+    print(json.dumps({k: report[k] for k in ('basket_return', 'market_state', 'neutralised_ic', 'neutralised_references_beta_and_size', 'largest_negative_contributor',
                                              'short_borrow_break_even_per_year', 'test_window_looks')}
                      | dict(constant_ic={k: v['ic']['mean'] for k, v in constant.items()},
                             pick_gross_t=report['pick_gross']['tstat']), indent=1, sort_keys=True))

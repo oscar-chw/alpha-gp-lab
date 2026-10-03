@@ -4,16 +4,28 @@
   "main_config": "binance_daily_config.json",
   "main_result": "../results/binance_daily_main.json",
   "analysis_result": "../results/binance_analysis.json",
-  "market_state_signals": ["gp_pick", "random_search_pick", "range_10d"],
+  "market_state_signals": [
+    "gp_pick",
+    "random_search_pick",
+    "range_10d"
+  ],
   "beta_window": 120,
   "size_window": 20,
   "newey_west_lags": 5,
-  "bootstrap": {"block": 20, "reps": 10000, "seed": 20261003, "level": 0.95},
+  "bootstrap": {
+    "block": 20,
+    "reps": 10000,
+    "seed": 20261003,
+    "level": 0.95
+  },
+  "neutralised_references": {
+    "low_vol_60d": "-ts_std(returns, 60)"
+  },
   "test_window_looks": {
     "main run: GP pick and 2 baselines": 3,
     "follow-up: 19 more GP seeds, 20 random-search seeds, the range control": 40,
     "walk-forward folds 2 and 3 (test windows inside this one): picks and baselines": 6,
-    "these diagnostics: frozen ranking, train-beta ranking, 3 neutralised ICs": 5,
+    "these diagnostics: frozen ranking, train-beta ranking, 3 neutralised ICs, then (round 2) neutralised low-vol-60d and neutralised frozen ranking": 7,
     "sibling repo asof-research: 120 grid hypotheses on the same pairs and window": 120
   }
 }
