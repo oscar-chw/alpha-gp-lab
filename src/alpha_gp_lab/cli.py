@@ -40,7 +40,8 @@ def load_inputs(config_path):
 
 def summary(report):
     """The printed result: what a reader needs, nothing that is not in report.json."""
-    keep = ('mean_ic', 'ic_tstat', 'mean_turnover', 'mean_net', 'net_tstat', 'sum_net', 'intervals')
+    keep = ('mean_ic', 'ic_tstat', 'mean_turnover', 'mean_gross', 'mean_net', 'net_tstat', 'sum_net', 'intervals',
+            'valid_ic_intervals')
     folds = []
     for f in report['folds']:
         folds.append(dict(fold=f['fold'], status=f['status'], regimes=f['regimes'], split_dates=f['split_dates'],
