@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "name": "walk-forward-regime-shifts",
+  "seed": 20261003,
+  "data": {
+    "kind": "synthetic",
+    "seed": 11,
+    "assets": 30,
+    "industries": 3,
+    "start_date": "2024-01-01",
+    "segments": [
+      {
+        "regime": "reversal",
+        "days": 200
+      },
+      {
+        "regime": "momentum",
+        "days": 120
+      },
+      {
+        "regime": "noise",
+        "days": 100
+      },
+      {
+        "regime": "adverse",
+        "days": 100
+      }
+    ]
+  },
+  "evaluation": {
+    "delay": 1,
+    "fee_bps": 5
+  },
+  "walk_forward": {
+    "warmup": 30,
+    "train": 100,
+    "validation": 40,
+    "test": 40,
+    "step": 40
+  },
+  "gp": {
+    "population": 32,
+    "generations": 6,
+    "tournament": 4,
+    "elitism": 4,
+    "crossover_prob": 0.6,
+    "max_depth": 6,
+    "max_nodes": 15,
+    "init_depth": [
+      2,
+      4
+    ],
+    "windows": [
+      1,
+      2,
+      3,
+      5,
+      10,
+      20
+    ],
+    "hall_of_fame": 8,
+    "max_attempts": 20
+  },
+  "fitness": {
+    "turnover_penalty": 0.02,
+    "complexity_penalty": 0.001
+  },
+  "selection": {
+    "min_ic": 0.02,
+    "max_turnover": 1.6,
+    "max_corr": 0.7,
+    "select_k": 3
+  },
+  "llm": {
+    "brief": "Daily bars for a cross-section of equities grouped into industries. Look for short-horizon reversal and momentum effects, industry-relative variants and volume-conditioned signals. Prefer simple, low-turnover expressions.",
+    "n": 10,
+    "replay": "llm_replay.json",
+    "use_seeds": true
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "entries": {
+    "c0df48d708a474bf11de7081440aa192d4f9fc80166eb8b391b4d8b9a109a2b4": {
+      "prompt": "You propose seed expressions for a genetic-programming search over cross-sectional equity factors.\nResearch brief: Daily bars for a cross-section of equities grouped into industries. Look for short-horizon reversal and momentum effects, industry-relative variants and volume-conditioned signals. Prefer simple, low-turnover expressions.\n\nGrammar (anything else is rejected):\nFields: open, high, low, close, volume, returns (returns = close / previous close - 1).\nCross-sectional: rank(x), zscore(x), abs(x), sign(x), log(x), winsorize(x, std=K) with K in 0.5..8.\nIndustry-relative: group_rank(x, industry), group_zscore(x, industry), group_neutralize(x, industry).\nTime-series (d = integer days 1..60; ts_std, ts_rank, ts_corr need d >= 2): ts_delta(x, d), ts_delay(x, d), ts_mean(x, d), ts_sum(x, d), ts_std(x, d), ts_rank(x, d), ts_min(x, d), ts_max(x, d), ts_decay_linear(x, d), ts_corr(x, y, d).\nArithmetic: x + y, x - y, x * y, x / y, -x. No numeric constants except windows and std.\n\nReturn exactly 10 expressions, one per line, with no numbering, commentary or code fences.\n",
+      "response": "-returns\ngroup_neutralize(-returns, industry)\n-ts_delta(close, 1)\nts_mean(returns, 5)\n-ts_corr(close, volume, 10)\n(ts_rank(volume, 10) * -returns)\n(-returns * ts_rank(volume, 10))\nrank(vwap)\nts_mean(close, 0)\n__import__('os').system('true')\n",
+      "source": "HAND-WRITTEN FIXTURE (not real LLM output)"
+    }
+  },
+  "note": "Contains HAND-WRITTEN FIXTURE entries (not real LLM output); each entry names its source. The fixture response was written by hand to exercise the pipeline, including one duplicate and three invalid lines that the grammar must reject. Replace it with `seeds --live` once Oscar approves the quota."
+}
