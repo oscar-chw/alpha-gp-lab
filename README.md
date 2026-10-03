@@ -113,6 +113,31 @@ the stored schema and trigger SQL with the expected DDL, recomputes the entire e
 compares it byte for byte, then reads every SQLite row back. A directory without the manifest (an interrupted run) is kept
 but refused for reuse.
 
+### Design decisions and trade-offs
+
+- **Parse, never `eval`.** LLM text and offspring go through the same `ast`-based parser, so a
+  hostile line cannot run. The cost is a hand-maintained grammar: anything outside it is
+  refused, not guessed.
+- **Standard library only.** It runs on a bare Python 3.11 with nothing to install. The cost is
+  speed: one real-data run takes about 90 s in pure Python, and nothing is vectorised.
+- **Split roles enforced by construction.** Each evaluator only holds the panel up to its own
+  split's end, so test bars cannot reach the search. The protection is against leakage, not
+  against a regime that starts after validation (the synthetic demo shows that).
+- **Pre-registered real-data configs.** The configs were committed before any real-data run, so
+  thresholds could not be tuned on the results. The cost: guesses such as min IC 0.01 stay
+  fixed even where they turn out weak (walk-forward fold 1).
+- **Rank IC as fitness and selection score.** It is robust to fat-tailed returns and needs no
+  position sizing. The cost: it ignores costs and dollar P&L, and on the real data it picked a
+  signal whose validation net was negative.
+- **Delay 1, close-to-close.** A signal never sees the bar it trades on. The cost: a day is
+  skipped, which handicaps short-horizon reversal.
+- **Append-only lineage and full recomputation in `verify`.** Every candidate and score can be
+  replayed exactly. The costs: each run computes twice, and a bundle only verifies on the
+  platform that wrote it.
+- **Real data pinned by hash, never committed.** The repository stays small and redistributes no
+  exchange data, while `verify-data` proves which files were used. The cost: readers download
+  the data themselves.
+
 ## Results (real numbers with their source; synthetic clearly labelled)
 
 Values are copied from the JSON each command prints (full precision). "net" is the mean
@@ -191,7 +216,8 @@ pick subtracts a z-score from `ts_min(low, 20)`, a raw price in USDT, so for mos
 price level. Folds 2 and 3 overlap the main run's test period; they are separate searches on
 different training windows, not extra evidence for the main pick.
 
-**LLM seeds: not run.** The single permitted live call,
+**LLM seeds: not run. Live LLM seeds pending: CLI login expired on 2026-10-03.** The single
+permitted live call,
 `PYTHONPATH=src python3.11 -m alpha_gp_lab seeds --live --config fixtures/binance_daily_config.json`,
 exited 1 before reaching a model: `claude auth status` reports the local CLI is not signed in,
 and the CLI's JSON shows 0 input and 0 output tokens. Nothing was saved as LLM output, and no
@@ -312,7 +338,7 @@ chosen on a validation window that was partly momentum and then tested on pure n
 - `python3.11 tests/hand_cases.py` re-derives the evaluator's arithmetic in exact Fractions:
   for example IC 2/5, turnover 2, gross 1/20 and net 49/1000 on a four-asset case.
 - On the development machine the demo printed `demo finished in 9.6s` to stderr on its last run, and
-  `scripts/check.sh` (tests, hand cases, the three synthetic runs above, two replays, then
+  `scripts/check.sh` (tests, hand cases, `scripts/demo.sh`, the other two synthetic runs above, two replays, then
   `verify-data` and the main real-data run when the data is present) exited 0 both with and
   without `data/binance-daily/`. Runtime varies by machine.
 
@@ -326,6 +352,7 @@ python3.11 -m alpha_gp_lab demo --out runs/demo          # single split, SYNTHET
 python3.11 -m alpha_gp_lab verify runs/demo              # hashes + full recomputation + SQLite read-back
 python3.11 -m alpha_gp_lab walkforward --out runs/wf     # rolling folds, about 20 s here
 python3.11 -m alpha_gp_lab seeds                         # replayed LLM proposals and their verdicts
+bash scripts/demo.sh                                     # the demo plus its replay, in a temp folder
 bash scripts/check.sh                                    # everything above plus the test suite
 ```
 
@@ -360,7 +387,8 @@ src/alpha_gp_lab/
   store.py         run bundle, append-only SQLite lineage, manifest, verify
   config.py        strict config validation, index or date splits, fold lists, walk-forward folds
   cli.py           demo | walkforward | run | verify | seeds | verify-data
-scripts/           check.sh, fetch_binance_daily.py
+scripts/           check.sh, demo.sh, fetch_binance_daily.py
+.github/workflows/ ci.yml: runs check.sh on Python 3.11 (not yet run on GitHub)
 fixtures/          configs (SYNTHETIC and Binance), binance_universe.json, LLM replay
 results/           printed summaries of the real-data runs and the failed live-LLM attempt
 tests/             unittest suite and hand_cases.py (Fractions, no evaluator import)
