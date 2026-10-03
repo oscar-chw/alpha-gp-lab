@@ -1,0 +1,31 @@
+{
+  "name": "binance-daily-34-analysis",
+  "note": "Pre-registered follow-up analyses of the main Binance run. Committed before scripts/analyze_binance.py was run on real data; the main config and its committed result are inputs, never changed.",
+  "main_config": "binance_daily_config.json",
+  "main_result": "../results/binance_daily_main.json",
+  "primary_seed": 20261003,
+  "seeds": [20261003, 20261004, 20261005, 20261006, 20261007, 20261008, 20261009, 20261010, 20261011, 20261012,
+            20261013, 20261014, 20261015, 20261016, 20261017, 20261018, 20261019, 20261020, 20261021, 20261022],
+  "random_search_budget": 640,
+  "control": {
+    "range_10d": "-ts_mean(((close - low) / close), 10)"
+  },
+  "interpretation_references": {
+    "range_10d": "-ts_mean(((close - low) / close), 10)",
+    "low_vol_20d": "-ts_std(returns, 20)"
+  },
+  "bootstrap": {
+    "block": 20,
+    "reps": 10000,
+    "seed": 20261003,
+    "level": 0.95
+  },
+  "newey_west_lags": [5, 20],
+  "bonferroni_counts": ["validation_candidates", "unique_expressions"],
+  "decision_rules": {
+    "gp_vs_random": "The random-search row in the main table uses primary_seed. Over all seeds, GP is said to beat random search on test IC (or test net) only if the mean over seeds of the GP pick minus the mean of the random pick exceeds 2 Welch standard errors; seeds with no qualifying candidate are counted and excluded from the means. Otherwise the README says GP does not beat random search.",
+    "pick_vs_comparator": "For the control, the primary-seed random pick and both baselines: block-bootstrap 95% interval of the mean daily difference (pick minus comparator) on test, same blocks for both series. An interval containing 0 means the two cannot be told apart.",
+    "interpretation": "Mean cross-sectional rank correlation of the pick with each interpretation reference on train and validation only (never test).",
+    "significance": "Pick's test IC: Newey-West t at each lag, normal two-sided p, Bonferroni-adjusted by each count in bonferroni_counts taken from the primary-seed GP run."
+  }
+}

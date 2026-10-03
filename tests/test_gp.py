@@ -3,9 +3,9 @@ import random
 import tempfile
 import unittest
 
-from helpers import inputs, perturbed, small_config
+from helpers import inputs, panel_for, perturbed, small_config
 from alpha_gp_lab.evaluate import Evaluator
-from alpha_gp_lab.gp import compute_report, crossover, mutate
+from alpha_gp_lab.gp import compute_report, crossover, mutate, random_search
 from alpha_gp_lab.grammar import canonical, depth, parse, positions, size
 
 
@@ -177,6 +177,49 @@ class Search(unittest.TestCase):
         for a, b in zip(spans, spans[1:]):
             self.assertLessEqual(a['test'][1], b['test'][0])
         self.assertEqual(report['summary']['folds'], len(spans))
+
+
+class RandomSearch(unittest.TestCase):
+    """The equal-budget control: same generator, filter and validation rule as the GP, no breeding."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = small_config()
+        cls.panel = panel_for(cls.config)
+        cls.split = cls.config['splits']
+        cls.out = random_search(cls.panel, cls.split, cls.config, 30, 1)
+
+    def test_budget_is_distinct_admitted_signals(self):
+        self.assertEqual(self.out['counts']['occurrences'], 30)
+        hall = self.out['hall_of_fame']
+        self.assertEqual(len(hall), self.config['gp']['hall_of_fame'])
+        self.assertEqual(len({canonical(parse(e)) for e in hall}), len(hall))
+        self.assertEqual(self.out['validation_candidates'], len(hall))
+        # repeats are refused across the whole sample, not per batch: 30 draws here repeat some signals
+        self.assertGreater(self.out['counts']['rejected_duplicate'] + self.out['counts']['rejected_equivalent'], 0)
+
+    def test_pick_follows_the_validation_rule(self):
+        self.assertEqual(self.out['status'], 'SELECTED')
+        self.assertEqual(self.out['selected'], self.out['shortlist'][0])
+        self.assertIn(self.out['selected'], self.out['hall_of_fame'])
+        self.assertGreaterEqual(self.out['validation']['mean_ic'], self.config['selection']['min_ic'])
+        self.assertLessEqual(self.out['validation']['mean_turnover'], self.config['selection']['max_turnover'])
+
+    def test_seeded(self):
+        self.assertEqual(random_search(self.panel, self.split, self.config, 30, 1), self.out)
+        self.assertNotEqual(random_search(self.panel, self.split, self.config, 30, 2)['hall_of_fame'],
+                            self.out['hall_of_fame'])
+
+    def test_test_data_cannot_change_the_pick(self):
+        other = random_search(perturbed(self.panel, self.split['test'][0]), self.split, self.config, 30, 1)
+        self.assertEqual((other['selected'], other['validation']), (self.out['selected'], self.out['validation']))
+        self.assertNotEqual(other['test'], self.out['test'])
+
+    def test_no_qualifier_means_no_test(self):
+        config = copy.deepcopy(self.config)
+        config['selection']['min_ic'] = 0.99
+        out = random_search(self.panel, self.split, config, 30, 1)
+        self.assertEqual((out['status'], out['selected'], out['test']), ('NO_QUALIFYING_CANDIDATE', None, None))
 
 
 if __name__ == '__main__':

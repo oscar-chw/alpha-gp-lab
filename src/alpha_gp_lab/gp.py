@@ -87,14 +87,10 @@ def _regimes(panel, start, end):
     return sorted(set(panel.regimes[start + 1:end + 1])) if panel.regimes else None
 
 
-def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
-    gp, fit, sel, ev = config['gp'], config['fitness'], config['selection'], config['evaluation']
-    (ts, te), (vs, ve), (xs, xe) = split['train'], split['validation'], split['test']
-    rng = random.Random(f'{config["seed"]}:{fold}')
-    pen = (fit['turnover_penalty'], fit['complexity_penalty'])
-    train = Evaluator(panel.head(te + 1), ev['delay'], ev['fee_bps'])
-    counts = dict(occurrences=0, rejected_limits=0, rejected_duplicate=0, rejected_equivalent=0,
-                  rejected_degenerate=0, llm_seeds_admitted=0, population_shortfall=0)
+def _admitter(train, ts, te, gp, pen, counts):
+    """The size / duplicate / degenerate / semantic-equivalence filter, against the ``taken`` set
+    the caller passes. Shared by the GP and the random-search control so both count and reject
+    candidates the same way."""
     assessed = {}
 
     def assess(tree):
@@ -106,7 +102,6 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
         return assessed[key]
 
     def admit(tree, taken):
-        """The duplicate / semantic-equivalence filter, against the generation being built."""
         if depth(tree) > gp['max_depth'] or size(tree) > gp['max_nodes']:
             counts['rejected_limits'] += 1
             return None
@@ -123,6 +118,54 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
             return None
         taken.update((canon, fp))
         return m, s, fp
+    return admit
+
+
+def _order(p):
+    return (-p['score'], p['record']['expression'], p['record']['id'])
+
+
+def _choose(hall, val, vs, ve, sel, pen, results):
+    """Validation role, shared by the GP and the random-search control: re-score the hall of fame,
+    keep candidates passing the qualification rule, rank them by penalised fitness and shortlist
+    them through the correlation filter. Returns (shortlist, shortlist entries, rejected entries)."""
+    qualified = []
+    for p in hall:
+        m = val.metrics(p['tree'], vs, ve)
+        s = score(m, p['tree'], *pen)
+        results.append(dict(node=p['record']['id'], split='validation', metrics=m, score=s))
+        if s is not None and m['mean_ic'] >= sel['min_ic'] and m['mean_turnover'] <= sel['max_turnover']:
+            qualified.append((s, p, m))
+    qualified.sort(key=lambda x: (-x[0], x[1]['record']['expression'], x[1]['record']['id']))
+    # Correlation filter: against alphas selected before this run (config existing_alphas) and
+    # against those already shortlisted. Only the existing alphas can change the final pick.
+    existing = [parse(e) for e in sel['existing_alphas']]
+    shortlist, entries, rejected = [], [], []
+    for s, p, m in qualified:
+        if len(shortlist) == sel['select_k']:
+            break
+        selected = existing + [q['tree'] for _, q, _ in shortlist]
+        corrs = [val.correlation(p['tree'], q, vs, ve) for q in selected]
+        worst = max((abs(c) for c in corrs if c is not None), default=0.0)
+        entry = dict(id=p['record']['id'], expression=p['record']['expression'], validation_score=s,
+                     validation=m, max_abs_corr_to_selected=worst)
+        if worst > sel['max_corr']:
+            rejected.append(entry)
+        else:
+            shortlist.append((s, p, m))
+            entries.append(entry)
+    return shortlist, entries, rejected
+
+
+def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
+    gp, fit, sel, ev = config['gp'], config['fitness'], config['selection'], config['evaluation']
+    (ts, te), (vs, ve), (xs, xe) = split['train'], split['validation'], split['test']
+    rng = random.Random(f'{config["seed"]}:{fold}')
+    pen = (fit['turnover_penalty'], fit['complexity_penalty'])
+    train = Evaluator(panel.head(te + 1), ev['delay'], ev['fee_bps'])
+    counts = dict(occurrences=0, rejected_limits=0, rejected_duplicate=0, rejected_equivalent=0,
+                  rejected_degenerate=0, llm_seeds_admitted=0, population_shortfall=0)
+    admit = _admitter(train, ts, te, gp, pen, counts)
 
     nodes, results, history, generations = [], [], [], []
 
@@ -168,18 +211,15 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
     emit(0, pop, 0, 0)
     history.extend(pop)
 
-    def order(p):
-        return (-p['score'], p['record']['expression'], p['record']['id'])
-
     def tournament(pop):
-        return min(rng.sample(pop, min(gp['tournament'], len(pop))), key=order)
+        return min(rng.sample(pop, min(gp['tournament'], len(pop))), key=_order)
 
     for generation in range(1, gp['generations']):
         if not pop:
             break
         first_node, first_result = len(nodes), len(results)
         new, taken = [], set()
-        for elite in sorted(pop, key=order)[:gp['elitism']]:
+        for elite in sorted(pop, key=_order)[:gp['elitism']]:
             add(new, generation, elite['tree'], [elite['record']['id']], 'elite', admit(elite['tree'], taken))
         tries = 0
         while len(new) < gp['population'] and tries < gp['population'] * gp['max_attempts']:
@@ -206,9 +246,9 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
 
     # Hall of fame: best train score per distinct fingerprint across every generation.
     best = {}
-    for p in sorted(history, key=order):
+    for p in sorted(history, key=_order):
         best.setdefault(p['fp'], p)
-    hall = sorted(best.values(), key=order)[:gp['hall_of_fame']]
+    hall = sorted(best.values(), key=_order)[:gp['hall_of_fame']]
 
     report = dict(fold=fold, splits=split, split_dates={k: [panel.dates[a], panel.dates[b]] for k, (a, b) in split.items()},
                   generations=generations, counts=counts,
@@ -216,31 +256,7 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
                   hall_of_fame=[p['record']['id'] for p in hall], shortlist=[], correlation_rejected=[],
                   selected_id=None, selected_expression=None, selected_origin=None, validation=None, test=None)
     val = Evaluator(panel.head(ve + 1), ev['delay'], ev['fee_bps'])
-    qualified = []
-    for p in hall:
-        m = val.metrics(p['tree'], vs, ve)
-        s = score(m, p['tree'], *pen)
-        results.append(dict(node=p['record']['id'], split='validation', metrics=m, score=s))
-        if s is not None and m['mean_ic'] >= sel['min_ic'] and m['mean_turnover'] <= sel['max_turnover']:
-            qualified.append((s, p, m))
-    qualified.sort(key=lambda x: (-x[0], x[1]['record']['expression'], x[1]['record']['id']))
-    # Correlation filter: against alphas selected before this run (config existing_alphas) and
-    # against those already shortlisted. Only the existing alphas can change the final pick.
-    existing = [parse(e) for e in sel['existing_alphas']]
-    shortlist = []
-    for s, p, m in qualified:
-        if len(shortlist) == sel['select_k']:
-            break
-        selected = existing + [q['tree'] for _, q, _ in shortlist]
-        corrs = [val.correlation(p['tree'], q, vs, ve) for q in selected]
-        worst = max((abs(c) for c in corrs if c is not None), default=0.0)
-        entry = dict(id=p['record']['id'], expression=p['record']['expression'], validation_score=s,
-                     validation=m, max_abs_corr_to_selected=worst)
-        if worst > sel['max_corr']:
-            report['correlation_rejected'].append(entry)
-        else:
-            shortlist.append((s, p, m))
-            report['shortlist'].append(entry)
+    shortlist, report['shortlist'], report['correlation_rejected'] = _choose(hall, val, vs, ve, sel, pen, results)
     tester = Evaluator(panel.head(xe + 1), ev['delay'], ev['fee_bps'])
     # Fixed control expressions, scored on the same splits, timing and costs as the GP's pick.
     # They are not candidates: they never enter the GP, the hall of fame or the selection.
@@ -262,6 +278,43 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
     report['unique_expressions'] = len({n['expression'] for n in nodes})
     report['nodes'], report['results'] = nodes, results
     return report
+
+
+def random_search(panel, split, config, budget, seed):
+    """Equal-budget control for the GP: ``budget`` random trees from the GP's own generation-0
+    generator (ramped half-and-half over the config's ``init_depth`` and windows), admitted by the
+    same filter (duplicates and equivalents are refused across the whole sample, so every member is
+    a distinct signal), the best ``hall_of_fame`` on train, then the GP's validation rule and one
+    test score. No LLM seeds and no evolution: this is what the GP's breeding has to beat."""
+    gp, fit, sel, ev = config['gp'], config['fitness'], config['selection'], config['evaluation']
+    (ts, te), (vs, ve), (xs, xe) = split['train'], split['validation'], split['test']
+    rng = random.Random(f'random:{seed}')
+    pen = (fit['turnover_penalty'], fit['complexity_penalty'])
+    train = Evaluator(panel.head(te + 1), ev['delay'], ev['fee_bps'])
+    counts = dict(occurrences=0, rejected_limits=0, rejected_duplicate=0, rejected_equivalent=0, rejected_degenerate=0)
+    admit = _admitter(train, ts, te, gp, pen, counts)
+    lo, hi = gp['init_depth']
+    members, taken, tries = [], set(), 0
+    while len(members) < budget and tries < budget * gp['max_attempts']:
+        tries += 1
+        tree = random_tree(rng, rng.randint(lo, hi), gp['windows'], full=rng.random() < 0.5)
+        verdict = admit(tree, taken)
+        if verdict:
+            members.append(dict(record=dict(id=f'r{len(members)}', expression=str(tree)), tree=tree,
+                                score=verdict[1], fp=verdict[2]))
+    counts['occurrences'] = len(members)
+    hall = sorted(members, key=_order)[:gp['hall_of_fame']]
+    val, results = Evaluator(panel.head(ve + 1), ev['delay'], ev['fee_bps']), []
+    shortlist, entries, rejected = _choose(hall, val, vs, ve, sel, pen, results)
+    out = dict(seed=seed, budget=budget, counts=counts, validation_candidates=len(results),
+               hall_of_fame=[p['record']['expression'] for p in hall], shortlist=[e['expression'] for e in entries],
+               correlation_rejected=len(rejected), status='SELECTED' if shortlist else 'NO_QUALIFYING_CANDIDATE',
+               selected=None, validation=None, test=None)
+    if shortlist:
+        _, pick, m = shortlist[0]
+        tester = Evaluator(panel.head(xe + 1), ev['delay'], ev['fee_bps'])
+        out.update(selected=pick['record']['expression'], validation=m, test=tester.metrics(pick['tree'], xs, xe, detail=True))
+    return out
 
 
 def compute_report(config, panel, llm_record, on_generation=None):
