@@ -1,10 +1,23 @@
 # alpha-gp-lab
 
-that proposes seed expressions, and strict train / validation / test roles, in the Python
-standard library only.
+*choose* on validation data and take one untouched test score, with pre-registered real-data runs
+and controls. Python standard library only.
 
-Results come from two sources, always labelled: real Binance spot daily bars for 34 coins
-(2020-01-01 to 2026-08-31, a **survivorship-biased** universe, see Limits) and SYNTHETIC data
+**Real-data result (Binance daily, 34 coins, test 2025-01 to 2026-08): test rank IC 0.082, net ≈ 0
+after costs.** The GP's pick has test IC 0.0821 (95% block-bootstrap interval 0.06368 to 0.10035;
+Bonferroni-adjusted p below 1e-9 even over all 487 expressions tried), but its net return is
+8.0e-05 per day after 10 bps per side (interval −7.1e-04 to 7.7e-04, indistinguishable from zero).
+The pick is a smoothed daily-range / low-volatility measure: a one-line 10-day mean range scores the
+same (test IC 0.0817), and an equal-budget random search comes within noise of the GP on test IC.
+Sources: `results/binance_daily_main.json`, `results/binance_analysis.json`; the universe is
+
+![Cumulative net return on the test period: the GP pick, the random-search pick, the simple control and 20-day momentum all end between +0.04 and +0.10 summed over 607 days, while 1-day reversal loses 0.93](docs/figures/cumulative_net.png)
+
+```sh
+export PYTHONPATH=src
+python3.11 -m alpha_gp_lab demo --out runs/demo    # SYNTHETIC regime-change demo, ~10 s
+bash scripts/check.sh                              # 93 tests, demo, replays; real-data steps if data/ exists
+```
 
 ## The problem
 
@@ -74,6 +87,12 @@ them on train, validation and test with the same evaluators, timing and costs as
 They never enter the GP, the hall of fame or the selection. The printed summary also counts
 `validation_candidates`, every candidate the pick was chosen from on validation.
 
+**Controls and inference** (`gp.random_search`, `src/alpha_gp_lab/stats.py`). Random search draws
+the GP's budget of random expressions from its own generator and filter, with no breeding, and
+goes through the same validation rule and single test score. For the real-data pick, Newey-West
+t-statistics, a circular block bootstrap over days and Bonferroni bounds sit beside the i.i.d.
+t-statistic the evaluator prints.
+
 **LLM seed proposer** (`src/alpha_gp_lab/llm_seed.py`). A prompt containing a short research
 brief and the grammar (never data) asks for N expressions. Responses are cached in a JSON
 replay file keyed by the SHA-256 of the exact prompt. Every proposed line is parsed; invalid
@@ -129,6 +148,9 @@ but refused for reuse.
 - **Rank IC as fitness and selection score.** It is robust to fat-tailed returns and needs no
   position sizing. The cost: it ignores costs and dollar P&L, and on the real data it picked a
   signal whose validation net was negative.
+- **Random search shares the GP's filter and validation rule.** The control differs from the GP
+  only in having no breeding, so a difference between them is the GP's contribution. The cost:
+  it inherits the GP's generator, so it says nothing about a smarter non-evolutionary search.
 - **Delay 1, close-to-close.** A signal never sees the bar it trades on. The cost: a day is
   skipped, which handicaps short-horizon reversal.
 - **Append-only lineage and full recomputation in `verify`.** Every candidate and score can be
@@ -178,6 +200,12 @@ Output: `results/binance_daily_main.json`.
 | GP pick `abs(ts_decay_linear((low / close), 10))` | 0.07148111461736868 | 0.08208763518369619 (7.106267209479283) | 0.27298586844370465 | 0.0003534791635240535 | 8.049329508034882e-05 (0.2184396051637011) | 0.04885943011377173 |
 | momentum_20d `(close / ts_delay(close, 20))` | -0.017496146192444408 | -0.006158512090458223 (-0.5588498549217263) | 0.3045894780045946 | 0.0003768912600628651 | 7.23017820582705e-05 (0.1835034941876255) | 0.04388718170937019 |
 | reversal_1d `-returns` | 0.012864710545246051 | 0.011485586060223782 (1.1150804633424585) | 1.3103524132462043 | -0.0002194546543761369 | -0.0015298070676223413 (-4.090451699976516) | -0.9285928900467612 |
+| *random search, equal budget* `ts_decay_linear(-ts_std(returns, 5), 20)` | 0.04790283617149554 | 0.08001626010548919 (6.7788549855658005) | 0.11008818683981006 | 0.0002515778361908061 | 0.00014148964935099608 (0.37756295049535377) | 0.08588421715605463 |
+| *simple control* range_10d `-ts_mean(((close - low) / close), 10)` | 0.0675223594147245 | 0.08168754151237534 (7.120987588283992) | 0.23781374164163194 | 0.00039088590783317885 | 0.0001530721661915469 (0.42775063095956656) | 0.09291480487826898 |
+
+The first three rows are the pre-registered main run. The two rows in italics come from the
+pre-registered follow-up analysis below (`results/binance_analysis.json`, `table`): they were not part
+of the main run and did not influence its pick.
 
 - The pick was made by crossover in generation 6. Its validation net was
   -0.00041132983838806654 per day (t-stat -0.6699945071164971): the selection rule ranks by
@@ -237,6 +265,7 @@ comparison on real data. The ablation without seeds is the main run above.
 | 5 | `run` walk-forward config | `2ba1d3a` | 0 | identical numbers, without `mean_gross` and `valid_ic_intervals`; overwritten by run 7 |
 | 6 | `run` main config | `6352651` | 0 | committed as `results/binance_daily_main.json` |
 | 7 | `run` walk-forward config | `6352651` | 0 | committed as `results/binance_walkforward.json` |
+| 8 | `scripts/analyze_binance.py` (follow-up plan) | `c5e212e` | 0 | committed as `results/binance_analysis.json`; 20 GP and 20 random-search seeds |
 
 Runs 4 to 7 were repeated only to print two more statistics (`net_tstat`, then `mean_gross` and
 `valid_ic_intervals`); every number that existed before was reproduced exactly, and the
@@ -250,8 +279,112 @@ seed or threshold was changed after a real-data result. In the main run the GP s
 candidate occurrences (487 distinct expressions) on train, 16 hall-of-fame candidates on
 validation, and tested 1. The walk-forward scored 16 candidates on validation in each of its 4
 folds (64 in total; 479, 471, 498 and 488 distinct expressions on train). The 2 baselines were
-also scored on validation and test in every fold, as controls that cannot be selected. None of
-the printed t-statistics adjusts for this.
+also scored on validation and test in every fold, as controls that cannot be selected. The printed t-statistics
+do not adjust for this; the follow-up analysis below does.
+
+#### Follow-up analyses (pre-registered)
+
+Plan: `fixtures/binance_analysis_config.json` and `scripts/analyze_binance.py`, committed in
+`c5e212e` before either was run on real data. Command (run once, exit 0, about 6 minutes on 10
+processes): `PYTHONPATH=src python3.11 scripts/analyze_binance.py --config fixtures/binance_analysis_config.json --out results/binance_analysis.json`.
+The script refuses to run unless its rerun of the main config's seed reproduces
+`results/binance_daily_main.json`, so everything below is about the same pick. The main config and
+the numbers above were not changed. Every value below is in `results/binance_analysis.json`.
+
+**1. Equal-budget random search.** `gp.random_search` draws random expressions from the GP's own
+generation-0 generator (same grammar, depths and windows), admits them through the same size,
+duplicate, degenerate and equivalence filter until it holds 640, takes the 16 best on train as its
+hall of fame, and then applies the GP's validation rule and one test score. That is the GP's budget
+of 640 scored candidates and 16 validation candidates, without breeding. Repeats are refused across
+the whole sample, so random search scores 640 distinct expressions to the GP's 487, which slightly
+favours random search.
+
+- Same seed as the main run (20261003): the random-search pick (table above) has test IC
+  0.08001626010548919 against the GP's 0.08208763518369619. The mean daily difference in IC,
+  GP minus random, is 0.002071375078206996 with a 95% block-bootstrap interval of
+  -0.009921112586589882 to 0.01383129666553508: **on test IC, GP does not beat random search.** On
+  test net the random pick earned more (0.00014148964935099608 vs 8.049329508034882e-05 per day;
+  difference interval -0.00043579238701655563 to 0.00033671739522876676), also within noise.
+- Over the 20 pre-registered seeds (20261003 to 20261022; every search selected a candidate):
+
+| Search | Test IC: mean (sd) | Test IC: min / max | Test IC > 0 | Test net / day: mean (sd) | Test net > 0 |
+|---|---:|---:|---:|---:|---:|
+| GP | 0.07388586321664807 (0.013659820943687753) | 0.04625279433014809 / 0.09506108299321919 | 20 of 20 | 0.0002368738116273152 (0.00034361327676581024) | 16 of 20 |
+| Random search | 0.06680987612562639 (0.026109551001904433) | -0.005359901932605528 / 0.0866857539846881 | 19 of 20 | -8.902775539050045e-05 (0.0003306100440178426) | 8 of 20 |
+| GP minus random (Welch SE) | 0.007075987091021682 (0.006589003573130991) | | | 0.00032590156701781564 (0.00010662389159452423) | |
+
+  By the pre-registered rule (a difference above 2 standard errors), **GP does not beat random
+  search on test IC** (1.07 SE) and **does beat it on test net** (3.06 SE). Two caveats on the net
+  result: all 40 searches share one test period, so seeds are not independent evidence about the
+  future, and the GP's own mean net across seeds is not separately significant. A post-hoc
+  description, not pre-registered: the random picks are mostly raw one-day range ratios such as
+  `low / high`, with a mean test turnover of 0.373 against 0.142 for the GP picks (means of
+  `per_seed[].test.mean_turnover`), so the GP's net advantage looks like smoothing (lower
+  turnover), not a better signal.
+
+**2. Multiple-testing accounting** for the pick's test IC and net.
+
+- Trials: the GP scored 640 candidate occurrences (487 distinct expressions) on train, 16 on
+  validation and 1 on test; random search 640 (640 distinct), 16 and 1 (`trials`). The follow-up
+  also ran 19 more GP seeds and 20 random-search seeds; none of them can change the pick.
+- Autocorrelation: the evaluator's `ic_tstat` (7.106267209479283) and `net_tstat` divide by the
+  i.i.d. standard error, so **they do not account for autocorrelation.** Newey-West t-statistics
+  (Bartlett kernel; 5 lags by the usual rule of thumb for 607 days, and 20 lags): test IC
+  7.599252358060714 and 8.748327616754851; test net 0.20679410837004805 and 0.21428399697840456.
+  The daily ICs are slightly negatively autocorrelated, so the correction raises the IC t rather
+  than lowering it.
+- Block bootstrap (circular, 20-day blocks, 10,000 resamples, seed 20261003; IC and net use the
+  same resampled days), 95% intervals of the test mean (`inference`):
+
+| Signal | Test IC interval | Test net / day interval | Share of resampled net means <= 0 |
+|---|---:|---:|---:|
+| GP pick | 0.0636799402903561 to 0.10035325365701847 | -0.0007064142854871428 to 0.0007678056491314962 | 0.3947 |
+| Random-search pick | 0.0624403493898164 to 0.09741090083772667 | -0.0007400820427339123 to 0.0009270157135124233 | 0.3472 |
+| Simple control (range_10d) | 0.06263203897459231 to 0.10038758633313695 | -0.0005920896054684247 to 0.0008186950594915661 | 0.3175 |
+| momentum_20d | -0.02939096537080695 to 0.01695088780978325 | -0.0007482154064405774 to 0.000982818885975489 | 0.451 |
+| reversal_1d | -0.013509788442234168 to 0.03743229126264225 | -0.0023693024297604644 to -0.0006975015498045824 | 1.0 |
+
+- Bonferroni: one hypothesis was tested (the pick), so Holm's step-down gives the same number.
+  Two-sided normal p-values for the pick's test IC, multiplied by the number of candidates
+  (`significance`):
+
+| t-statistic | p | x 16 validation candidates | x 487 distinct train expressions |
+|---|---:|---:|---:|
+| i.i.d. (7.106267209479283) | 1.1922348460025308e-12 | 1.9075757536040492e-11 | 5.806183700032325e-10 |
+| Newey-West, 5 lags (7.599252358060714) | 2.978464581746037e-14 | 4.76554333079366e-13 | 1.4505122513103202e-11 |
+| Newey-West, 20 lags (8.748327616754851) | 2.1653783596568337e-18 | 3.464605375450934e-17 | 1.0545392611528781e-15 |
+
+  The test IC survives every correction. The net return was never significant, so there is nothing
+  to correct there: the honest summary is a strong, robust ranking signal with no demonstrated
+  profit after costs.
+
+**3. What the pick is.** `abs(ts_decay_linear((low / close), 10))`: `low / close` lies in (0, 1]
+for positive prices, so `abs` does nothing (GP seed 20261019 found the same expression without
+`abs`, with identical test numbers). The signal is a linearly weighted 10-day mean of how close each
+day's close sat to its low; it is high for coins with small recent `(close - low) / close`, a
+downside-range measure. Long calm coins, short coins with wide recent ranges: a low-volatility /
+low-range effect. On train and validation only (never test), its mean cross-sectional rank
+correlation is 0.9393280472063433 / 0.9439588936446309 with the 10-day mean range and
+0.686944980784657 / 0.7197994914030369 with negative 20-day realised volatility
+(`interpretation`). Two of the 20 GP seeds picked negative 20-day volatility itself
+(`-ts_std(returns, 20)` and its z-score), and the random-search picks are mostly range ratios.
+
+The pre-registered control, the plain 10-day mean of `(close - low) / close` (negated), does as
+well as the GP's pick: test IC 0.08168754151237534 vs 0.08208763518369619 (difference interval
+-0.0044459023786067395 to 0.005251225430640031), test net 0.0001530721661915469 vs
+8.049329508034882e-05 per day (difference interval -0.00022533518509705016 to
+7.957890861657941e-05) (`pick_minus.range_10d`). **A one-line, non-GP version captures the pick.**
+The direction of the survivorship bias for this signal is not known: the universe omits coins that
+collapsed, plausibly volatile ones the signal would have shorted (which would understate it), while
+coins still listed in 2026 may be the period's winners.
+
+**4. Figures** (`scripts/plot_binance.py`, run with matplotlib from the shared venv; the
+library does not need it). Rolling 60-day mean test IC:
+
+![Rolling 60-day test rank IC: the GP pick, the random-search pick and the simple control move together between about 0 and 0.15; momentum and reversal swing around zero](docs/figures/rolling_ic.png)
+
+The cumulative net return on test, after 10 bps per side, is the figure at the top of this README
+(`docs/figures/cumulative_net.png`).
 
 ### Synthetic results
 
@@ -334,7 +467,7 @@ chosen on a validation window that was partly momentum and then tested on pure n
 
 ### Tests and runtime
 
-- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 75 tests` and `OK`.
+- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 93 tests` and `OK`.
 - `python3.11 tests/hand_cases.py` re-derives the evaluator's arithmetic in exact Fractions:
   for example IC 2/5, turnover 2, gross 1/20 and net 49/1000 on a four-asset case.
 - On the development machine the demo printed `demo finished in 9.6s` to stderr on its last run, and
@@ -370,6 +503,14 @@ python3.11 -m alpha_gp_lab run --config fixtures/binance_daily_config.json --out
 python3.11 -m alpha_gp_lab run --config fixtures/binance_walkforward_config.json --out runs/binance-wf      # minutes
 ```
 
+The follow-up analysis and figures (the analysis takes about 6 minutes on 10 processes; the plot
+needs matplotlib, here from the shared venv in `PORTFOLIO_VENV`):
+
+```sh
+python3.11 scripts/analyze_binance.py --config fixtures/binance_analysis_config.json --out results/binance_analysis.json
+"$PORTFOLIO_VENV/bin/python" scripts/plot_binance.py   # writes docs/figures/*.png
+```
+
 `check.sh` runs `verify-data` and re-runs the main real-data config against
 `results/binance_daily_main.json` when `data/binance-daily/` exists, and prints a skip message
 when it does not. `seeds --live --config <config>` refreshes a replay entry through the local
@@ -381,16 +522,19 @@ when it does not. `seeds --live --config <config>` refreshes a replay entry thro
 src/alpha_gp_lab/
   grammar.py       parser (ast, no eval), frozen trees, canonical form, industry templates
   evaluate.py      operator semantics, timing, rank IC, turnover, net, fitness, fingerprints
-  gp.py            random trees, crossover, mutation, generations, validation selection, folds
+  gp.py            random trees, crossover, mutation, generations, validation selection, folds,
+                   equal-budget random search
+  stats.py         Newey-West t, circular block bootstrap, normal p-value, Bonferroni
   data.py          Panel, SYNTHETIC regime generator, OHLCV CSV loader, pinned-universe check
   llm_seed.py      prompt, hash-keyed replay cache, grammar validation, optional claude -p
   store.py         run bundle, append-only SQLite lineage, manifest, verify
   config.py        strict config validation, index or date splits, fold lists, walk-forward folds
   cli.py           demo | walkforward | run | verify | seeds | verify-data
-scripts/           check.sh, demo.sh, fetch_binance_daily.py
+scripts/           check.sh, demo.sh, fetch_binance_daily.py, analyze_binance.py, plot_binance.py
 .github/workflows/ ci.yml: runs check.sh on Python 3.11 (not yet run on GitHub)
 fixtures/          configs (SYNTHETIC and Binance), binance_universe.json, LLM replay
-results/           printed summaries of the real-data runs and the failed live-LLM attempt
+results/           printed summaries of the real-data runs, the follow-up analysis, the failed live-LLM attempt
+docs/figures/      README figures drawn from results/binance_analysis.json
 tests/             unittest suite and hand_cases.py (Fractions, no evaluator import)
 ```
 
@@ -420,8 +564,13 @@ Diagrams of the data flow, the split roles and the lineage schema are in
 - **Simple portfolio model.** Dollar-neutral, unit gross, daily rebalance, no risk model and no
   compounding. "net" is a hypothetical interval return, not a backtest.
 - **Selection and multiple testing.** Validation picks the best of up to 16 hall-of-fame
-  candidates, which the GP bred from hundreds of train-scored expressions. The printed
-  t-statistics adjust for neither, nor for autocorrelated daily values.
+  candidates, which the GP bred from hundreds of train-scored expressions. The `run` output's
+  t-statistics adjust for neither, nor for autocorrelation; the follow-up analysis adds
+  Newey-West t-statistics, block-bootstrap intervals and Bonferroni bounds for the main pick only,
+  not for the walk-forward folds.
+- **The GP adds little here.** On this data an equal-budget random search matches it on test IC,
+  and a one-line range measure matches its pick. The main evidence is about the low-range effect,
+  not about genetic programming.
 - **No real LLM output.** The only replay entry is hand-written by someone who knew the
   synthetic generator, and the one live attempt failed. On real data an LLM's prior knowledge
   of published anomalies would itself be information from outside the sample period.
