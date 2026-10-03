@@ -62,5 +62,25 @@ class Grammar(unittest.TestCase):
             tree.op = 'sub'
 
 
+
+class CoinUnits(unittest.TestCase):
+    """Raw prices and volumes carry an arbitrary per-coin unit; only unit-free values compare across coins."""
+
+    def test_unit_free_expressions(self):
+        from alpha_gp_lab.grammar import coin_units
+        for e in ('abs(ts_decay_linear((low / close), 10))', 'close / ts_delay(close, 20)', '-returns',
+                  'sign(ts_delta(close, 5))', 'rank(close * volume)', 'ts_corr(close, volume, 10)', 'ts_rank(low, 5)'):
+            self.assertEqual(coin_units(parse(e)), 0, e)
+
+    def test_size_proxies_found_by_the_real_data_search_are_flagged(self):
+        from alpha_gp_lab.grammar import coin_units
+        for e in ('high - volume', 'sign(group_neutralize(winsorize(close, std=4), industry))',
+                  'ts_max(returns, 10) * zscore(low)', 'ts_std(ts_delta(returns, 10), 20) * group_neutralize(close, industry)',
+                  'abs(group_rank(winsorize(ts_min(returns, 10), std=4), industry)) / volume',
+                  'ts_min((ts_min(low, 20) - group_neutralize(zscore(returns), industry)), 20)',
+                  'sign(zscore(close))', 'log(volume)', 'close'):
+            self.assertNotEqual(coin_units(parse(e)), 0, e)
+
+
 if __name__ == '__main__':
     unittest.main()

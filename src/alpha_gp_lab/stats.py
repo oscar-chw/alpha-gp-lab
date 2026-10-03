@@ -48,3 +48,23 @@ def block_bootstrap_ci(xs, block, reps, seed, level=0.95):
     lo = means[int(math.floor((1 - level) / 2 * reps))]
     hi = means[int(math.ceil((1 + level) / 2 * reps)) - 1]
     return dict(low=lo, high=hi, share_at_or_below_zero=sum(x <= 0 for x in means) / reps)
+
+
+def residualise(y, columns):
+    """Residuals of an OLS fit of ``y`` on an intercept and ``columns`` (lists the length of y),
+    by the normal equations; None when the regressors are collinear."""
+    rows = [[1.0] + [c[i] for c in columns] for i in range(len(y))]
+    k = len(rows[0])
+    a = [[math.fsum(r[p] * r[q] for r in rows) for q in range(k)] + [math.fsum(r[p] * v for r, v in zip(rows, y))]
+         for p in range(k)]
+    for col in range(k):   # Gauss-Jordan with partial pivoting on the k x (k+1) system
+        piv = max(range(col, k), key=lambda r: abs(a[r][col]))
+        if abs(a[piv][col]) < 1e-12 * max(1.0, max(abs(x) for x in a[piv][:k])):
+            return None
+        a[col], a[piv] = a[piv], a[col]
+        for r in range(k):
+            if r != col:
+                f = a[r][col] / a[col][col]
+                a[r] = [x - f * z for x, z in zip(a[r], a[col])]
+    beta = [a[r][k] / a[r][r] for r in range(k)]
+    return [v - math.fsum(b * x for b, x in zip(beta, r)) for v, r in zip(y, rows)]

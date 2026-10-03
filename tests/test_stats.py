@@ -4,7 +4,7 @@ import random
 import unittest
 
 import helpers  # noqa: F401  (puts src on the path)
-from alpha_gp_lab.stats import block_bootstrap_ci, bonferroni, newey_west_tstat, two_sided_p
+from alpha_gp_lab.stats import block_bootstrap_ci, bonferroni, newey_west_tstat, residualise, two_sided_p
 
 
 class NeweyWest(unittest.TestCase):
@@ -57,6 +57,28 @@ class PValues(unittest.TestCase):
     def test_bonferroni_scales_and_caps(self):
         self.assertAlmostEqual(bonferroni(0.01, 16), 0.16)
         self.assertEqual(bonferroni(0.2, 16), 1.0)
+
+
+class Residualise(unittest.TestCase):
+    def test_exact_linear_fit_leaves_nothing(self):
+        x = [1.0, 2.0, 4.0, 7.0]
+        for r in residualise([2 + 3 * v for v in x], [x]):
+            self.assertAlmostEqual(r, 0.0, places=12)
+
+    def test_by_hand_and_orthogonal_to_regressors(self):
+        # y = (0, 1, 1, 3) on x = (0, 1, 2, 3): Sxy 4.5, Sxx 5, slope 0.9, intercept 1.25 - 1.35 = -0.1
+        res = residualise([0.0, 1.0, 1.0, 3.0], [[0.0, 1.0, 2.0, 3.0]])
+        for got, want in zip(res, (0.1, 0.2, -0.7, 0.4)):
+            self.assertAlmostEqual(got, want, places=12)
+        rng = random.Random(2)
+        x1, x2 = [rng.gauss(0, 1) for _ in range(30)], [rng.gauss(0, 1) for _ in range(30)]
+        res = residualise([a - 2 * b + rng.gauss(0, 1) for a, b in zip(x1, x2)], [x1, x2])
+        for col in (x1, x2, [1.0] * 30):
+            self.assertAlmostEqual(sum(r * c for r, c in zip(res, col)), 0.0, places=9)
+
+    def test_collinear_regressors_are_refused(self):
+        x = [1.0, 2.0, 3.0, 5.0]
+        self.assertIsNone(residualise([1.0, 0.0, 2.0, 1.0], [x, [2 * v for v in x]]))
 
 
 if __name__ == '__main__':

@@ -5,8 +5,8 @@ import unittest
 
 from helpers import inputs, panel_for, perturbed, small_config
 from alpha_gp_lab.evaluate import Evaluator
-from alpha_gp_lab.gp import compute_report, crossover, mutate, random_search
-from alpha_gp_lab.grammar import canonical, depth, parse, positions, size
+from alpha_gp_lab.gp import _choose, compute_report, crossover, mutate, random_search
+from alpha_gp_lab.grammar import canonical, coin_units, depth, parse, positions, size
 
 
 def inputs_in_tmp(config):
@@ -220,6 +220,33 @@ class RandomSearch(unittest.TestCase):
         config['selection']['min_ic'] = 0.99
         out = random_search(self.panel, self.split, config, 30, 1)
         self.assertEqual((out['status'], out['selected'], out['test']), ('NO_QUALIFYING_CANDIDATE', None, None))
+
+
+class OptInRules(unittest.TestCase):
+    """unit_check and min_coverage are off unless a config asks for them, so the committed runs replay."""
+
+    def test_unit_check_admits_only_unit_free_candidates(self):
+        config = small_config()
+        config['gp']['unit_check'] = True
+        fold = run(config)[0]['folds'][0]
+        self.assertTrue(all(coin_units(parse(n['expression'])) == 0 for n in fold['nodes']))
+        self.assertGreater(fold['counts']['rejected_units'], 0)
+        self.assertNotIn('rejected_units', run(small_config())[0]['folds'][0]['counts'])
+
+    def test_min_coverage_refuses_a_candidate_defined_on_few_validation_days(self):
+        config = small_config()
+        panel = panel_for(config)
+        vs, ve = config['splits']['validation']
+        val = Evaluator(panel.head(ve + 1), 1, 5)
+        hall = [dict(record=dict(id=e, expression=e), tree=parse(e), score=0.0)
+                for e in ('ts_sum(ts_mean(returns, 60), 30)', '-returns')]   # the first is warm until late validation
+        sel = dict(config['selection'], min_ic=-1, max_turnover=2, max_corr=1, select_k=5)
+        pen = (0.0, 0.0)
+        sparse = val.metrics(hall[0]['tree'], vs, ve)
+        self.assertLess(sparse['valid_ic_intervals'], 0.5 * sparse['intervals'])
+        self.assertEqual(len(_choose(hall, val, vs, ve, sel, pen, [])[0]), 2)
+        kept = _choose(hall, val, vs, ve, dict(sel, min_coverage=0.5), pen, [])[0]
+        self.assertEqual([p['record']['expression'] for _, p, _ in kept], ['-returns'])
 
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@
   "first_date": "2020-01-01",
   "last_date": "2026-08-31",
   "rows_per_symbol": 2435,
+  "selection_rule": "Chosen by the orchestrating agent on 2026-10-03, with hindsight: large USDT spot pairs listed on Binance by 2020-01 and still trading in 2026. No numeric size or volume threshold was recorded, so \"large\" is a judgement, not a reproducible screen. KNCUSDT met the rule but its download failed. Pairs delisted before 2026 could not qualify; which ones a point-in-time rule would have added has not been checked.",
   "symbols": [
     "ADAUSDT",
     "ALGOUSDT",

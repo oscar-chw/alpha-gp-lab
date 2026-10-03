@@ -16,7 +16,7 @@ import random
 
 from .config import canonical, digest, folds
 from .evaluate import Evaluator, score
-from .grammar import (BINARY, FIELDS, GROUP, MIN_WINDOW, TS, UNARY, Node, canonical as canonical_form, depth,
+from .grammar import (BINARY, FIELDS, GROUP, MIN_WINDOW, TS, UNARY, Node, canonical as canonical_form, coin_units, depth,
                       industry_variants, parse, positions, replace_at, size)
 
 # Operators that can replace one another in a point mutation without changing arity or parameters.
@@ -105,6 +105,9 @@ def _admitter(train, ts, te, gp, pen, counts):
         if depth(tree) > gp['max_depth'] or size(tree) > gp['max_nodes']:
             counts['rejected_limits'] += 1
             return None
+        if gp.get('unit_check') and coin_units(tree) != 0:
+            counts['rejected_units'] = counts.get('rejected_units', 0) + 1
+            return None
         canon = canonical_form(tree)
         if canon in taken:
             counts['rejected_duplicate'] += 1
@@ -134,7 +137,10 @@ def _choose(hall, val, vs, ve, sel, pen, results):
         m = val.metrics(p['tree'], vs, ve)
         s = score(m, p['tree'], *pen)
         results.append(dict(node=p['record']['id'], split='validation', metrics=m, score=s))
-        if s is not None and m['mean_ic'] >= sel['min_ic'] and m['mean_turnover'] <= sel['max_turnover']:
+        # min_coverage (optional, default 0): a candidate whose IC is defined on few days, such as one that
+        # abstains almost always, cannot qualify on those few days alone.
+        if (s is not None and m['mean_ic'] >= sel['min_ic'] and m['mean_turnover'] <= sel['max_turnover']
+                and m['valid_ic_intervals'] >= sel.get('min_coverage', 0) * m['intervals']):
             qualified.append((s, p, m))
     qualified.sort(key=lambda x: (-x[0], x[1]['record']['expression'], x[1]['record']['id']))
     # Correlation filter: against alphas selected before this run (config existing_alphas) and

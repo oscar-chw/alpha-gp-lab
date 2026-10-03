@@ -49,6 +49,34 @@ def _number(value):
     return text[:-2] if text.endswith('.0') else text
 
 
+# Exponent of the per-coin base unit: a price is USDT per coin (-1), a volume is coins (+1). A
+# coin's unit is arbitrary (a redenomination rescales both), so only exponent-0 quantities can be
+# compared across coins; ranking raw close or volume ranks by unit size, a disguised size proxy.
+_COIN_UNIT = {'open': -1, 'high': -1, 'low': -1, 'close': -1, 'volume': 1, 'returns': 0}
+_CROSS_SECTIONAL = ('rank', 'zscore', 'log', 'winsorize') + GROUP
+
+
+def coin_units(node):
+    """The coin-unit exponent of an expression, or None if it adds unlike units or applies a
+    cross-sectional operator (or log) to a quantity that is not unit-free."""
+    if node.op in _COIN_UNIT:
+        return _COIN_UNIT[node.op]
+    units = [coin_units(c) for c in node.args]
+    if None in units:
+        return None
+    if node.op in ('sign', 'ts_rank', 'ts_corr'):   # invariant to positive rescaling of their inputs
+        return 0
+    if node.op in _CROSS_SECTIONAL:
+        return 0 if units[0] == 0 else None
+    if node.op in ('add', 'sub'):
+        return units[0] if units[0] == units[1] else None
+    if node.op == 'mul':
+        return units[0] + units[1]
+    if node.op == 'div':
+        return units[0] - units[1]
+    return units[0]   # neg, abs and the remaining time-series operators keep their input's unit
+
+
 def depth(node):
     return 1 + max((depth(c) for c in node.args), default=0)
 

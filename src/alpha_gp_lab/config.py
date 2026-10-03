@@ -139,7 +139,9 @@ def validate(config):
 
     gp = config['gp']
     _keys(gp, ['population', 'generations', 'tournament', 'elitism', 'crossover_prob', 'max_depth', 'max_nodes',
-               'init_depth', 'windows', 'hall_of_fame', 'max_attempts'], where='gp')
+               'init_depth', 'windows', 'hall_of_fame', 'max_attempts'], ['unit_check'], where='gp')
+    if type(gp.get('unit_check', False)) is not bool:
+        raise ValueError('gp.unit_check must be true or false')
     _int(gp['population'], 4, 1024, 'gp.population')
     _int(gp['generations'], 1, 200, 'gp.generations')
     _int(gp['tournament'], 2, gp['population'], 'gp.tournament')
@@ -165,7 +167,9 @@ def validate(config):
     _num(fit['complexity_penalty'], 0, 1, 'fitness.complexity_penalty')
 
     sel = config['selection']
-    _keys(sel, ['min_ic', 'max_turnover', 'max_corr', 'select_k', 'existing_alphas'], where='selection')
+    _keys(sel, ['min_ic', 'max_turnover', 'max_corr', 'select_k', 'existing_alphas'], ['min_coverage'], where='selection')
+    if 'min_coverage' in sel:
+        _num(sel['min_coverage'], 0, 1, 'selection.min_coverage')
     _num(sel['min_ic'], -1, 1, 'selection.min_ic')
     _num(sel['max_turnover'], 0, 2, 'selection.max_turnover')
     _num(sel['max_corr'], 0, 1, 'selection.max_corr')
