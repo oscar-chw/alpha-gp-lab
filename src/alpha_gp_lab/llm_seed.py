@@ -25,6 +25,7 @@ from .grammar import canonical, grammar_doc, parse
 log = logging.getLogger(__name__)
 FIXTURE_SOURCE = 'HAND-WRITTEN FIXTURE (not real LLM output)'
 LIVE_SOURCE = 'REAL LLM OUTPUT'
+NO_SEEDS_SOURCE = 'none: use_seeds is false, no LLM output read'
 _BULLET = re.compile(r'^(?:\*\s+|\d+[.)]\s*)')   # '* x', '1. x', '2) x'
 
 
@@ -81,11 +82,13 @@ def claude_cli(prompt, timeout=600):
     with tempfile.TemporaryDirectory() as empty:
         done = subprocess.run([exe, '-p', '--output-format', 'json', '--no-session-persistence', '--tools', ''],
                               input=prompt, capture_output=True, text=True, timeout=timeout, cwd=empty)
-    if done.returncode != 0:
-        raise RuntimeError(f'claude -p exited {done.returncode}: {(done.stderr or done.stdout).strip()[:500]}')
-    out = json.loads(done.stdout)
-    if out.get('is_error') or not isinstance(out.get('result'), str):
-        raise RuntimeError(f'claude -p returned an error: {str(out)[:500]}')
+    try:
+        out = json.loads(done.stdout)
+    except ValueError:
+        out = {}
+    if done.returncode != 0 or out.get('is_error') or not isinstance(out.get('result'), str):
+        detail = out.get('result') or done.stderr or done.stdout
+        raise RuntimeError(f'claude -p failed (exit {done.returncode}): {str(detail).strip()[:500]}')
     models = ', '.join(sorted(out.get('modelUsage') or {})) or 'model not reported'
     return out['result'], f'claude -p ({version}), model {models}'
 
@@ -127,6 +130,13 @@ def propose(brief, n, replay_path, live=False, runner=claude_cli):
     accepted, rejected, duplicates = parse_response(entry['response'])
     return dict(source=entry['source'], prompt=prompt, prompt_sha256=key, response=entry['response'],
                 requested=n, accepted=accepted, rejected=rejected, duplicates=duplicates)
+
+
+def no_seeds(brief, n):
+    """The record of a run that uses no LLM seeds: same shape, empty response, nothing read."""
+    prompt = build_prompt(brief, n)
+    return dict(source=NO_SEEDS_SOURCE, prompt=prompt, prompt_sha256=prompt_sha256(prompt), response='',
+                requested=n, accepted=[], rejected=[], duplicates=0)
 
 
 def check_record(record, brief, n):

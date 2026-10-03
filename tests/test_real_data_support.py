@@ -168,30 +168,38 @@ if sys.argv[1:] == ['--version']:
     print('9.9.9 (Fake)'); sys.exit(0)
 log = {{'args': sys.argv[1:], 'stdin': sys.stdin.read(), 'cwd_files': os.listdir('.')}}
 open(os.environ['FAKE_CLAUDE_LOG'], 'w').write(json.dumps(log))
+if os.environ.get('FAKE_CLAUDE_FAIL'):
+    print(json.dumps({{'type': 'result', 'is_error': True, 'result': 'Not logged in', 'modelUsage': {{}}}})); sys.exit(1)
 print(json.dumps({{'type': 'result', 'is_error': False, 'result': 'rank(close)\\n', 'modelUsage': {{'fake-model-1': {{}}}}}}))
 '''
 
 
 class ClaudeCli(unittest.TestCase):
-    def test_prompt_on_stdin_no_tools_empty_directory(self):
+    def call(self, **env):
         with tempfile.TemporaryDirectory() as tmp:
             exe = Path(tmp) / 'claude'
             exe.write_text(FAKE_CLAUDE.format(python=sys.executable))
             exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
             log = Path(tmp) / 'log.json'
             old = dict(os.environ)
-            os.environ.update(PATH=tmp + os.pathsep + old['PATH'], FAKE_CLAUDE_LOG=str(log))
+            os.environ.update(PATH=tmp + os.pathsep + old['PATH'], FAKE_CLAUDE_LOG=str(log), **env)
             try:
-                text, via = llm_seed.claude_cli('PROMPT TEXT')
+                return llm_seed.claude_cli('PROMPT TEXT'), json.loads(log.read_text())
             finally:
                 os.environ.clear()
                 os.environ.update(old)
-            seen = json.loads(log.read_text())
+
+    def test_prompt_on_stdin_no_tools_empty_directory(self):
+        (text, via), seen = self.call()
         self.assertEqual((text, via), ('rank(close)\n', 'claude -p (9.9.9 (Fake)), model fake-model-1'))
         self.assertEqual(seen['stdin'], 'PROMPT TEXT')
         self.assertEqual(seen['cwd_files'], [])
         self.assertEqual(seen['args'][seen['args'].index('--tools') + 1], '')
         self.assertNotIn('PROMPT TEXT', seen['args'])
+
+    def test_a_failed_call_raises_with_the_cli_message(self):
+        with self.assertRaisesRegex(RuntimeError, 'exit 1.*Not logged in'):
+            self.call(FAKE_CLAUDE_FAIL='1')
 
 
 if __name__ == '__main__':

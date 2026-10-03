@@ -8,7 +8,7 @@ import time
 from . import store
 from .config import read_json, validate
 from .data import check_universe, load_csv_dir, synthetic_from_config
-from .llm_seed import propose
+from .llm_seed import no_seeds, propose
 
 ROOT = Path(__file__).resolve().parents[2]
 DEMO_CONFIG = ROOT / 'fixtures' / 'demo_config.json'
@@ -16,7 +16,12 @@ WALK_FORWARD_CONFIG = ROOT / 'fixtures' / 'walkforward_config.json'
 UNIVERSE = ROOT / 'fixtures' / 'binance_universe.json'
 
 
-def load_inputs(config_path, live=False):
+def seed_record(config, config_path, live=False):
+    llm = config['llm']
+    return propose(llm['brief'], llm['n'], Path(config_path).parent / llm['replay'], live=live)
+
+
+def load_inputs(config_path):
     """Read a config and build its panel and LLM seed record. Relative paths resolve from the config's folder."""
     config_path = Path(config_path)
     raw = config_path.read_bytes()
@@ -28,7 +33,8 @@ def load_inputs(config_path, live=False):
         panel, dropped = load_csv_dir(config_path.parent / data['path'])
         if any(dropped.values()):
             print(json.dumps(dict(rows_dropped_to_align_dates=dropped)), file=sys.stderr)
-    llm = propose(config['llm']['brief'], config['llm']['n'], config_path.parent / config['llm']['replay'], live=live)
+    # The ablation reads no LLM output, so it needs no replay entry (and runs before any live call).
+    llm = seed_record(config, config_path) if config['llm']['use_seeds'] else no_seeds(config['llm']['brief'], config['llm']['n'])
     return raw, panel, llm
 
 
@@ -87,7 +93,7 @@ def main(argv=None):
                               ok=not problems, problems=problems), indent=2))
         return 1 if problems else 0
     if args.command == 'seeds':
-        _, _, llm = load_inputs(args.config, live=args.live)
+        llm = seed_record(validate(read_json(Path(args.config).read_bytes())), args.config, live=args.live)
         print(json.dumps({k: llm[k] for k in ('source', 'prompt_sha256', 'requested', 'accepted', 'rejected', 'duplicates')}, indent=2))
         return 0
     started = time.monotonic()
