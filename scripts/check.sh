@@ -16,4 +16,11 @@ trap 'rm -rf "$out"' EXIT
 "$PY" -m alpha_gp_lab run --config fixtures/demo_no_seeds_config.json --out "$out/no-seeds"
 "$PY" -m alpha_gp_lab walkforward --out "$out/walk-forward"
 "$PY" -m alpha_gp_lab verify "$out/walk-forward" > /dev/null
+
+# Real data is never committed. Without it these steps skip; with it the files must match the pinned hashes.
+if [ -d data/binance-daily ]; then
+  "$PY" -m alpha_gp_lab verify-data --data data/binance-daily > /dev/null
+else
+  echo "check.sh: data/binance-daily not present; real-data steps skipped (see README, How to run)"
+fi
 echo "check.sh: all passed"

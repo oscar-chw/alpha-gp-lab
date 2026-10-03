@@ -210,7 +210,8 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
         best.setdefault(p['fp'], p)
     hall = sorted(best.values(), key=order)[:gp['hall_of_fame']]
 
-    report = dict(fold=fold, splits=split, generations=generations, counts=counts,
+    report = dict(fold=fold, splits=split, split_dates={k: [panel.dates[a], panel.dates[b]] for k, (a, b) in split.items()},
+                  generations=generations, counts=counts,
                   regimes={k: _regimes(panel, *split[k]) for k in ('train', 'validation', 'test')},
                   hall_of_fame=[p['record']['id'] for p in hall], shortlist=[], correlation_rejected=[],
                   selected_id=None, selected_expression=None, selected_origin=None, validation=None, test=None)
@@ -240,9 +241,15 @@ def search(panel, split, config, seeds, fold, settings_sha, on_generation=None):
         else:
             shortlist.append((s, p, m))
             report['shortlist'].append(entry)
+    tester = Evaluator(panel.head(xe + 1), ev['delay'], ev['fee_bps'])
+    # Fixed control expressions, scored on the same splits, timing and costs as the GP's pick.
+    # They are not candidates: they never enter the GP, the hall of fame or the selection.
+    report['baselines'] = {name: dict(expression=str(parse(expr)), train=train.metrics(parse(expr), ts, te),
+                                      validation=val.metrics(parse(expr), vs, ve), test=tester.metrics(parse(expr), xs, xe))
+                           for name, expr in sorted(config.get('baselines', {}).items())}
     if shortlist:
         _, pick, m = shortlist[0]
-        test = Evaluator(panel.head(xe + 1), ev['delay'], ev['fee_bps']).metrics(pick['tree'], xs, xe, detail=True)
+        test = tester.metrics(pick['tree'], xs, xe, detail=True)
         results.append(dict(node=pick['record']['id'], split='test', metrics=test, score=score(test, pick['tree'], *pen)))
         origin = pick['record']
         by_id = {n['id']: n for n in nodes}
@@ -262,13 +269,13 @@ def compute_report(config, panel, llm_record, on_generation=None):
     settings_sha = digest(canonical(config))
     seeds = llm_record['accepted'] if config['llm']['use_seeds'] else []
     fold_reports = [search(panel, split, config, seeds, i, settings_sha, on_generation)
-                    for i, split in enumerate(folds(config, len(panel.dates)))]
+                    for i, split in enumerate(folds(config, panel.dates))]
     tested = [f['test']['mean_ic'] for f in fold_reports if f['test'] and f['test']['mean_ic'] is not None]
     summary = dict(folds=len(fold_reports), folds_selected=sum(f['status'] == 'SELECTED' for f in fold_reports),
                    mean_test_ic=sum(tested) / len(tested) if tested else None,
                    folds_test_ic_positive=sum(x > 0 for x in tested),
                    folds_test_ic_negative=sum(x < 0 for x in tested))
-    return dict(schema_version=1, name=config['name'], mode='single' if 'splits' in config else 'walk_forward',
+    return dict(schema_version=1, name=config['name'], mode='single' if isinstance(config.get('splits'), dict) else 'walk_forward',
                 data=dict(label=panel.label, synthetic=panel.synthetic, symbols=len(panel.symbols),
                           dates=len(panel.dates), first_date=panel.dates[0], last_date=panel.dates[-1]),
                 settings_sha256=settings_sha,

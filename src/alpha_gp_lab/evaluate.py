@@ -212,7 +212,7 @@ class Evaluator:
             sd = math.sqrt(math.fsum((x - mean_ic) ** 2 for x in valid) / (len(valid) - 1))
             tstat = mean_ic / (sd / math.sqrt(len(valid))) if sd > 0 else None
         out = dict(mean_ic=mean_ic, ic_tstat=tstat, mean_turnover=math.fsum(turnover) / n,
-                   mean_gross=math.fsum(gross_ret) / n, mean_net=math.fsum(net) / n,
+                   mean_gross=math.fsum(gross_ret) / n, mean_net=math.fsum(net) / n, sum_net=math.fsum(net),
                    intervals=n, valid_ic_intervals=len(valid), abstentions=sum(weights[t][0] is None for t in range(start, end)))
         if detail:
             out['ic_series'] = ics

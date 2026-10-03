@@ -1,4 +1,6 @@
 """Strict experiment-config validation: unknown or missing keys refuse, bounds are explicit."""
+from bisect import bisect_left, bisect_right
+from datetime import date
 import hashlib
 import json
 import math
@@ -55,9 +57,33 @@ def _span(pair, name):
     _int(pair[1], pair[0] + 1, 10**6, name + ' end')
 
 
+def _iso(v, name):
+    if not isinstance(v, str) or date.fromisoformat(v).isoformat() != v:
+        raise ValueError(f'{name} must be an ISO date YYYY-MM-DD')
+    return v
+
+
+def _split(split, where):
+    """One train/validation/test fold: index pairs [start, end], or ISO date pairs resolved against the panel."""
+    _keys(split, ['train', 'validation', 'test'], where=where)
+    previous = None
+    for name in ('train', 'validation', 'test'):
+        pair = split[name]
+        if isinstance(pair, list) and len(pair) == 2 and all(isinstance(v, str) for v in pair):
+            start, end = (_iso(v, f'{where}.{name}') for v in pair)
+            if end < start:
+                raise ValueError(f'{where}.{name}: end date before start date')
+        else:
+            _span(pair, f'{where}.{name}')
+            start, end = pair
+        if previous is not None and (type(start) is not type(previous) or start <= previous):
+            raise ValueError(f'{where} must be ordered train < validation < test, disjoint and of one kind')
+        previous = end
+
+
 def validate(config):
     _keys(config, ['schema_version', 'name', 'seed', 'data', 'evaluation', 'gp', 'fitness', 'selection', 'llm'],
-          ['splits', 'walk_forward'])
+          ['splits', 'walk_forward', 'baselines'])
     if config['schema_version'] != 1:
         raise ValueError('unsupported config schema_version')
     if not isinstance(config['name'], str) or not 1 <= len(config['name']) <= 64:
@@ -94,14 +120,15 @@ def validate(config):
     _num(ev['fee_bps'], 0, 100, 'evaluation.fee_bps')
 
     if 'splits' in config:
+        # One fold as an object; explicit walk-forward folds (e.g. calendar years) as a list.
         splits = config['splits']
-        _keys(splits, ['train', 'validation', 'test'], where='splits')
-        previous = -1
-        for name in ('train', 'validation', 'test'):
-            _span(splits[name], 'splits.' + name)
-            if splits[name][0] <= previous:
-                raise ValueError('splits must be ordered train < validation < test and disjoint')
-            previous = splits[name][1]
+        if isinstance(splits, list):
+            if not 1 <= len(splits) <= 50:
+                raise ValueError('splits list must hold 1..50 folds')
+            for i, split in enumerate(splits):
+                _split(split, f'splits[{i}]')
+        else:
+            _split(splits, 'splits')
     else:
         wf = config['walk_forward']
         _keys(wf, ['warmup', 'train', 'validation', 'test', 'step'], where='walk_forward')
@@ -148,6 +175,14 @@ def validate(config):
     for expr in sel['existing_alphas']:
         parse(expr)
 
+    baselines = config.get('baselines', {})
+    if not isinstance(baselines, dict) or len(baselines) > 10:
+        raise ValueError('baselines must map at most 10 names to expressions')
+    for name, expr in baselines.items():
+        if not 1 <= len(name) <= 64:
+            raise ValueError('baseline names must be short strings')
+        parse(expr)
+
     llm = config['llm']
     _keys(llm, ['brief', 'n', 'replay', 'use_seeds'], where='llm')
     if type(llm['use_seeds']) is not bool:
@@ -160,13 +195,27 @@ def validate(config):
     return config
 
 
-def folds(config, n_dates):
-    """Train/validation/test index spans: one fold for ``splits``, rolling folds for ``walk_forward``."""
+def _resolve(split, dates):
+    """Index spans for one fold. A date pair becomes the first and last panel dates inside it."""
+    out = {}
+    for name in ('train', 'validation', 'test'):
+        start, end = split[name]
+        if isinstance(start, str):
+            start, end = bisect_left(dates, start), bisect_right(dates, end) - 1
+            if not 0 <= start < end:
+                raise ValueError(f'{name} dates {split[name]} cover fewer than two panel dates')
+        out[name] = [start, end]
+    if out['test'][1] > len(dates) - 1:
+        raise ValueError('splits extend past the last date')
+    return out
+
+
+def folds(config, dates):
+    """Train/validation/test index spans: one or a listed set of folds for ``splits``, rolling folds for ``walk_forward``."""
+    n_dates = len(dates)
     if 'splits' in config:
         s = config['splits']
-        if s['test'][1] > n_dates - 1:
-            raise ValueError('splits extend past the last date')
-        return [s]
+        return [_resolve(f, dates) for f in (s if isinstance(s, list) else [s])]
     wf, out, k = config['walk_forward'], [], 0
     while True:
         ts = wf['warmup'] + k * wf['step']

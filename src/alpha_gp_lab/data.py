@@ -6,6 +6,7 @@ malformed input is refused, never filled.
 import csv
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+import hashlib
 import math
 from pathlib import Path
 import random
@@ -201,3 +202,31 @@ def load_csv_dir(path):
     bars = {k: [[data[s][d][i] for s in symbols] for d in common] for i, k in enumerate(BARS)}
     return Panel(tuple(symbols), tuple(groups[s] for s in symbols), tuple(common), bars, False,
                  'CSV:' + root.name), dropped
+
+
+def check_universe(path, universe):
+    """Compare a CSV directory with a pinned universe (``fixtures/binance_universe.json``).
+
+    Returns a list of problems; empty means every pinned file is present with its SHA-256,
+    row count and date range, and no other CSV is there for ``load_csv_dir`` to pick up.
+    """
+    root = Path(path)
+    if not root.is_dir():
+        return [f'data directory {root} not found']
+    expected = {s + '.csv' for s in universe['symbols']}
+    if set(universe['sha256']) != expected:
+        return ['universe file: sha256 keys do not match its symbol list']
+    present = {p.name for p in root.glob('*.csv')}
+    problems = [f'missing {n}' for n in sorted(expected - present)]
+    problems += [f'unexpected {n} (the loader would read it)' for n in sorted(present - expected)]
+    for name in sorted(expected & present):
+        raw = (root / name).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != universe['sha256'][name]:
+            problems.append(f'{name}: SHA-256 mismatch')
+            continue
+        days = [r.get('date') for r in csv.DictReader(raw.decode().splitlines())]
+        span = (len(days), days[0], days[-1]) if days else (0, None, None)
+        if span != (universe['rows_per_symbol'], universe['first_date'], universe['last_date']):
+            problems.append(f'{name}: {span[0]} rows {span[1]}..{span[2]}, universe says '
+                            f'{universe["rows_per_symbol"]} rows {universe["first_date"]}..{universe["last_date"]}')
+    return problems

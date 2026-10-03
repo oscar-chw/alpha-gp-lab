@@ -18,17 +18,19 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 
 from .grammar import canonical, grammar_doc, parse
 
 log = logging.getLogger(__name__)
 FIXTURE_SOURCE = 'HAND-WRITTEN FIXTURE (not real LLM output)'
+LIVE_SOURCE = 'REAL LLM OUTPUT'
 _BULLET = re.compile(r'^(?:\*\s+|\d+[.)]\s*)')   # '* x', '1. x', '2) x'
 
 
 def build_prompt(brief, n):
     return (
-        'You propose seed expressions for a genetic-programming search over cross-sectional equity factors.\n'
+        'You propose seed expressions for a genetic-programming search over cross-sectional factors.\n'
         f'Research brief: {brief.strip()}\n\n'
         f'Grammar (anything else is rejected):\n{grammar_doc()}\n\n'
         f'Return exactly {n} expressions, one per line, with no numbering, commentary or code fences.\n')
@@ -66,20 +68,32 @@ def parse_response(text):
 
 
 def claude_cli(prompt, timeout=600):
-    """Ask the local Claude Code CLI in print mode. Only reached through ``live=True``."""
+    """Ask the local Claude Code CLI in print mode; return (response text, label naming CLI and model).
+
+    Only reached through ``live=True``. The prompt goes in on stdin, every tool is disabled and
+    the working directory is empty, so the model sees the brief and the grammar and cannot read
+    any data file.
+    """
     exe = shutil.which('claude')
     if exe is None:
         raise RuntimeError('live mode needs the `claude` CLI on PATH')
-    done = subprocess.run([exe, '-p', prompt], capture_output=True, text=True, timeout=timeout)
+    version = subprocess.run([exe, '--version'], capture_output=True, text=True, timeout=60).stdout.strip()
+    with tempfile.TemporaryDirectory() as empty:
+        done = subprocess.run([exe, '-p', '--output-format', 'json', '--no-session-persistence', '--tools', ''],
+                              input=prompt, capture_output=True, text=True, timeout=timeout, cwd=empty)
     if done.returncode != 0:
-        raise RuntimeError(f'claude -p exited {done.returncode}: {done.stderr.strip()[:500]}')
-    return done.stdout
+        raise RuntimeError(f'claude -p exited {done.returncode}: {(done.stderr or done.stdout).strip()[:500]}')
+    out = json.loads(done.stdout)
+    if out.get('is_error') or not isinstance(out.get('result'), str):
+        raise RuntimeError(f'claude -p returned an error: {str(out)[:500]}')
+    models = ', '.join(sorted(out.get('modelUsage') or {})) or 'model not reported'
+    return out['result'], f'claude -p ({version}), model {models}'
 
 
 def _note(entries):
     if any(e['source'] == FIXTURE_SOURCE for e in entries.values()):
         return 'Contains HAND-WRITTEN FIXTURE entries (not real LLM output); each entry names its source.'
-    return 'Every entry is a live claude -p response; each entry names its source and date.'
+    return 'REAL LLM OUTPUT: every entry is a live claude -p response; each entry names its model and date.'
 
 
 def _load(path):
@@ -98,8 +112,9 @@ def propose(brief, n, replay_path, live=False, runner=claude_cli):
     key = prompt_sha256(prompt)
     cache = _load(replay_path)
     if live:
-        cache['entries'][key] = dict(source=f'claude -p, live run {date.today().isoformat()}',
-                                     prompt=prompt, response=runner(prompt))
+        response, via = runner(prompt)
+        cache['entries'][key] = dict(source=f'{LIVE_SOURCE}: {via}, {date.today().isoformat()}',
+                                     prompt=prompt, response=response)
         cache['note'] = _note(cache['entries'])
         tmp = Path(str(replay_path) + '.tmp')
         tmp.write_text(json.dumps(cache, indent=2, sort_keys=True) + '\n', encoding='utf-8')

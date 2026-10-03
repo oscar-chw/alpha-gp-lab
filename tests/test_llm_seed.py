@@ -5,9 +5,10 @@ from pathlib import Path
 
 from helpers import ROOT, small_config, write_replay
 from alpha_gp_lab import llm_seed
-from alpha_gp_lab.llm_seed import FIXTURE_SOURCE, build_prompt, check_record, parse_response, prompt_sha256, propose
+from alpha_gp_lab.llm_seed import FIXTURE_SOURCE, LIVE_SOURCE, build_prompt, check_record, parse_response, prompt_sha256, propose
 
 REPLAY = ROOT / 'fixtures' / 'llm_replay.json'
+LIVE_REPLAY = ROOT / 'fixtures' / 'llm_replay_live.json'
 
 
 def refuse(prompt):
@@ -18,7 +19,7 @@ class Replay(unittest.TestCase):
     def test_fixture_is_labelled_and_covers_both_configs(self):
         cache = json.loads(REPLAY.read_text())
         for entry in cache['entries'].values():
-            self.assertTrue(entry['source'] == FIXTURE_SOURCE or entry['source'].startswith('claude -p, live run'))
+            self.assertEqual(entry['source'], FIXTURE_SOURCE)
         if any(e['source'] == FIXTURE_SOURCE for e in cache['entries'].values()):
             self.assertIn('HAND-WRITTEN FIXTURE', cache['note'])
         for name in ('demo_config.json', 'demo_no_seeds_config.json', 'walkforward_config.json'):
@@ -55,13 +56,14 @@ class Replay(unittest.TestCase):
 
             def fake(prompt):
                 calls.append(prompt)
-                return 'ts_rank(volume, 10)\nrank(open, 3)\n'
+                return 'ts_rank(volume, 10)\nrank(open, 3)\n', 'claude -p (test), model fake-model'
             record = propose(config['llm']['brief'], config['llm']['n'], path, live=True, runner=fake)
             self.assertEqual(len(calls), 1)
-            self.assertTrue(record['source'].startswith('claude -p, live run'))
+            self.assertTrue(record['source'].startswith(LIVE_SOURCE + ': claude -p (test), model fake-model, '))
             self.assertEqual((record['accepted'], len(record['rejected'])), (['ts_rank(volume, 10)'], 1))
             cache = json.loads(path.read_text())
             self.assertNotIn('HAND-WRITTEN', cache['note'])
+            self.assertIn(LIVE_SOURCE, cache['note'])
             replayed = propose(config['llm']['brief'], config['llm']['n'], path, runner=refuse)
             self.assertEqual(replayed, record)
 

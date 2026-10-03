@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "name": "binance-daily-34-walk-forward",
+  "seed": 20261003,
+  "data": {
+    "kind": "csv",
+    "path": "../data/binance-daily"
+  },
+  "evaluation": {
+    "delay": 1,
+    "fee_bps": 10
+  },
+  "splits": [
+    {
+      "train": [
+        "2020-01-01",
+        "2021-12-31"
+      ],
+      "validation": [
+        "2022-01-01",
+        "2022-12-31"
+      ],
+      "test": [
+        "2023-01-01",
+        "2023-12-31"
+      ]
+    },
+    {
+      "train": [
+        "2021-01-01",
+        "2022-12-31"
+      ],
+      "validation": [
+        "2023-01-01",
+        "2023-12-31"
+      ],
+      "test": [
+        "2024-01-01",
+        "2024-12-31"
+      ]
+    },
+    {
+      "train": [
+        "2022-01-01",
+        "2023-12-31"
+      ],
+      "validation": [
+        "2024-01-01",
+        "2024-12-31"
+      ],
+      "test": [
+        "2025-01-01",
+        "2025-12-31"
+      ]
+    },
+    {
+      "train": [
+        "2023-01-01",
+        "2024-12-31"
+      ],
+      "validation": [
+        "2025-01-01",
+        "2025-12-31"
+      ],
+      "test": [
+        "2026-01-01",
+        "2026-08-31"
+      ]
+    }
+  ],
+  "gp": {
+    "population": 64,
+    "generations": 10,
+    "tournament": 4,
+    "elitism": 4,
+    "crossover_prob": 0.6,
+    "max_depth": 6,
+    "max_nodes": 15,
+    "init_depth": [
+      2,
+      4
+    ],
+    "windows": [
+      1,
+      2,
+      3,
+      5,
+      10,
+      20
+    ],
+    "hall_of_fame": 16,
+    "max_attempts": 20
+  },
+  "fitness": {
+    "turnover_penalty": 0.02,
+    "complexity_penalty": 0.001
+  },
+  "selection": {
+    "min_ic": 0.01,
+    "max_turnover": 1.0,
+    "max_corr": 0.7,
+    "select_k": 3,
+    "existing_alphas": []
+  },
+  "baselines": {
+    "momentum_20d": "close / ts_delay(close, 20)",
+    "reversal_1d": "-returns"
+  },
+  "llm": {
+    "brief": "Daily close-to-close bars for a few dozen large USDT spot pairs on one crypto exchange. There are no industries: every pair is in one group, so the industry operators act on the whole cross-section. The portfolio is dollar-neutral, rebalanced daily on data through the previous day, and pays 10 bps per side, so turnover is expensive. Look for cross-sectional signals such as short- and medium-horizon momentum or reversal, volatility, volume and trading-range effects. Prefer simple, low-turnover expressions.",
+    "n": 10,
+    "replay": "llm_replay_live.json",
+    "use_seeds": false
+  }
+}
