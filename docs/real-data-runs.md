@@ -16,7 +16,8 @@ and walk-forward tables at the full precision the JSON files hold.
 | 6 | `run` main config | `6352651` | 0 | committed as `results/binance_daily_main.json` |
 | 7 | `run` walk-forward config | `6352651` | 0 | committed as `results/binance_walkforward.json` |
 | 8 | `scripts/analyze_binance.py` (follow-up plan) | `c5e212e` | 0 | committed as `results/binance_analysis.json`; 20 GP and 20 random-search seeds |
-| 9 | `scripts/diagnose_binance.py` (POST-HOC diagnostics) | `a4273cd` | 0 | committed as `results/binance_diagnostics.json` |
+| 9 | `scripts/diagnose_binance.py` (POST-HOC diagnostics) | `a4273cd` | 0 | committed as `results/binance_diagnostics.json`; overwritten by run 10 |
+| 10 | `scripts/diagnose_binance.py` (adds up/down t-statistics and two neutralised reference rankings) | `e9ba45c` | 0 | every run-9 number reproduced; committed as `results/binance_diagnostics.json` |
 
 Runs 4 to 7 were repeated only to print more statistics (`net_tstat`, then `mean_gross` and
 `valid_ic_intervals`); every number that existed before was reproduced exactly, and the selection
@@ -37,6 +38,7 @@ pre-registration; it used no real data.
 | `3a2bbbc` | 18:21:48 | follow-up results committed |
 | `a4273cd` | 18:53:44 | post-hoc diagnostics script committed, after a reviewer had probed the test window |
 | `fd3556a` | 18:54:13 | post-hoc diagnostics results committed |
+| `e9ba45c` | 19:16:29 | two more post-hoc diagnostics (up/down t, neutralised reference rankings) committed before running, after a second review |
 
 So the follow-up plan fixed its seeds, budget, decision rules and bootstrap before it ran, but it
 was written knowing the main pick and its test score. In particular the range control was chosen

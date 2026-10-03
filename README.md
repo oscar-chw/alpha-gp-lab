@@ -3,16 +3,11 @@
 *choose* on validation data and take one untouched test score, with pre-registered real-data runs
 and controls. Python standard library only.
 
-**Real-data result (Binance daily, 34 coins, test 2025-01 to 2026-08): test rank IC 0.082, but
-mostly a fixed low-beta tilt in a falling market, and no profit before or after costs.** The GP,
-an equal-budget random search and a one-line 10-day range factor all reach test IC about 0.08. The
-34-coin basket fell 66% over test; the pick's IC was 0.25 on down days and -0.09 on up days, and its
-2024 ranking frozen as a constant scores 0.071 of the 0.082. Residualised on trailing beta and size
-using past data only, IC 0.049 remains (Newey-West t 5.5), still mostly on down days. Gross return
-is not significant (t 0.96): one short, ZEC (+1,357%), lost more than the whole book made. Sources:
-`results/binance_daily_main.json`, `results/binance_analysis.json`, `results/binance_diagnostics.json`
-(the diagnostics are post-hoc). The universe is survivorship-biased, the test window has been
-looked at 174 times across this repo and a sibling study, other data is labelled SYNTHETIC, and
+**Real-data result (Binance daily, 34 coins, test 2025-01 to 2026-08): test rank IC 0.082, but it
+is mostly a low-beta tilt in a market where the coin basket fell 66%, and its returns are
+indistinguishable from zero before and after costs.** The GP, an equal-budget random search and a one-line range factor all score
+about 0.08. After removing beta and size, IC 0.049 remains, and it comes from down days: the known
+low-volatility effect. Sources: `results/binance_*.json` (diagnostics post-hoc); survivorship-biased
 
 ![Cumulative net return on the test period: the GP pick, the random-search pick, the simple control and 20-day momentum all end between +0.04 and +0.10 summed over 607 days, while 1-day reversal loses 0.93](docs/figures/cumulative_net.png)
 
@@ -273,22 +268,34 @@ the leg out of 607):
 | LTCUSDT | 0.0192 | 473 | -53.9% | THETAUSDT | -0.0289 | 555 | -92.8% |
 | XRPUSDT | 0.0154 | 433 | -40.9% | ENJUSDT | -0.0188 | 444 | -88.8% |
 
-**Part of it survives neutralisation.** Each test day, the signal's ranks and the next-day returns
+**Part of it survives neutralisation, on down days only.** Each test day, the signal's ranks and the next-day returns
 are residualised cross-sectionally on each coin's trailing beta (120 days) and/or log dollar
 volume (20 days), both computed only from data the signal could see, and the rank IC is taken
 between the residuals (`neutralised_ic`):
 
-| Neutralised on | Test IC (t; Newey-West t) | 95% block-bootstrap interval | Mean IC on up / down days |
-|---|---:|---:|---:|
-| nothing (the pick as tested) | 0.0821 (7.11; 7.60) | 0.0637 to 0.100 | -0.0893 / 0.250 |
-| trailing beta | 0.0534 (5.98; 5.89) | 0.0345 to 0.0727 | 0.0164 / 0.0896 |
-| log dollar volume (size) | 0.0768 (6.85; 7.17) | 0.0578 to 0.0950 | -0.0797 / 0.230 |
-| beta and size | 0.0489 (5.56; 5.46) | 0.0311 to 0.0664 | 0.0113 / 0.0857 |
+| Neutralised on | Test IC (t; Newey-West t) | 95% block-bootstrap interval | Mean IC (t), up days | Mean IC (t), down days |
+|---|---:|---:|---:|---:|
+| nothing (the pick as tested) | 0.0821 (7.11; 7.60) | 0.0637 to 0.100 | -0.0893 | 0.250 |
+| trailing beta | 0.0534 (5.98; 5.89) | 0.0345 to 0.0727 | 0.0164 (1.22) | 0.0896 (7.81) |
+| log dollar volume (size) | 0.0768 (6.85; 7.17) | 0.0578 to 0.0950 | -0.0797 (-6.05) | 0.230 (17.5) |
+| beta and size | 0.0489 (5.56; 5.46) | 0.0311 to 0.0664 | 0.0113 (0.87) | 0.0857 (7.45) |
 
-Beta, not size, carries most of the tilt. After removing beta and size, an IC of 0.0489 remains
-and it is positive on both up and down days, but it is about 60% of the raw IC, still several times
-larger on down days, and measured on one window in which small alts fell. It is a residual ranking
-effect on this sample, not evidence of a tradable signal.
+There are 300 up days and 307 down days. Beta, not size, carries most of the tilt. After removing
+beta and size, IC 0.0489 remains (about 60% of the raw IC), but on up days it is 0.0113 with t 0.87,
+zero within noise: **the residual comes from the down days.**
+
+**The residual is the known low-volatility effect.** Under the same beta-and-size neutralisation
+(`neutralised_references_beta_and_size`):
+
+| Reference ranking, neutralised on beta and size | Test IC (t; Newey-West t) | 95% interval | Up days (t) | Down days (t) |
+|---|---:|---:|---:|---:|
+| plain low volatility, `-ts_std(returns, 60)` | 0.0451 (5.01; 4.69) | 0.0239 to 0.0659 | 0.0145 (1.09) | 0.0751 (6.32) |
+| the pick's 2024 ranking, frozen | 0.0197 (2.30; 2.40) | 0.00309 to 0.0364 | -0.0258 (-2.30) | 0.0643 (5.18) |
+
+A textbook 60-day volatility ranking scores almost the same residual IC as the GP's pick, with the
+same up/down pattern. Even a ranking frozen at the end of 2024 keeps 0.0197 after neutralisation,
+so part of the residual is still a fixed tilt rather than daily information. It is a known effect
+measured on one falling window, not evidence of a new or tradable signal.
 
 **Why the P&L is about zero, before costs as well as after.** Test gross is 3.53e-4 per day with
 t 0.959 (Newey-West 0.910): not significant before costs either. One coin explains it: ZECUSDT rose
@@ -364,10 +371,10 @@ random search scores 640 distinct expressions to the GP's 487, which slightly fa
   search tried on train and validation (those never saw test). Counted in
   `fixtures/binance_diagnostics_config.json`: 3 in the main run (pick and 2 baselines), 40 in the
   follow-up (19 more GP seeds, 20 random-search seeds, the range control), 6 from walk-forward
-  folds 2 and 3 (sub-windows of this one), 5 post-hoc diagnostics, and the 120 grid hypotheses of
-  the sibling repo asof-research on the same pairs and window: **174 looks**. Bonferroni over 174
-  (two-sided normal p; `test_window_looks`): the pick's raw test IC gives 2.07e-10 (i.i.d. t) and
-  5.18e-12 (Newey-West t); the neutralised ICs give 6.57e-7 (beta), 1.27e-10 (size) and 8.10e-6
+  folds 2 and 3 (sub-windows of this one), 7 post-hoc diagnostics, and the 120 grid hypotheses of
+  the sibling repo asof-research on the same pairs and window: **176 looks**. Bonferroni over 176
+  (two-sided normal p; `test_window_looks`): the pick's raw test IC gives 2.10e-10 (i.i.d. t) and
+  5.24e-12 (Newey-West t); the neutralised ICs give 6.64e-7 (beta), 1.28e-10 (size) and 8.20e-6
   (beta and size). The net was never significant, so there is nothing to correct there. Bonferroni
   treats each look as independent evidence; it cannot repair the single-window problem.
 
@@ -424,10 +431,11 @@ run is the ablation without seeds.
 
 #### Every real-data run
 
-Nine real-data commands so far, all listed with their code version and exit code in
+Ten real-data commands so far, all listed with their code version and exit code in
 [docs/real-data-runs.md](docs/real-data-runs.md#every-real-data-run): `verify-data`, one failed
 live LLM call, three main runs and two walk-forward runs (repeats only added printed fields and
-reproduced every earlier number), the follow-up analysis and the post-hoc diagnostics. One main
+reproduced every earlier number), the follow-up analysis and two runs of the post-hoc diagnostics (the second added fields and
+reproduced the first). One main
 config, one walk-forward config and one main GP seed were pre-registered; no config, seed or
 threshold was changed after a real-data result.
 
@@ -604,7 +612,7 @@ Diagrams of the data flow, the split roles and the lineage schema are in
   range-factor control, the bootstrap and the comparisons above). Across the portfolio, the sibling
   repo asof-research ran its own pre-registered study on the same 34 pairs, splits, costs and
   baselines, committed shortly after this repo's real-data results. Counted together, the window
-  has had 174 looks (see Results). The follow-up plan was committed 19 minutes after the main test
+  has had 176 looks (see Results). The follow-up plan was committed 19 minutes after the main test
   result and the diagnostics after a reviewer's probes, so neither was blind to it. Repeated looks
   at one window weaken it as out-of-sample evidence, and the window is one draw of a market in
   which small alts fell 66% against majors.
