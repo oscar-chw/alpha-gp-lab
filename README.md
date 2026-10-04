@@ -5,14 +5,19 @@ and controls. Python standard library only.
 
 **Real data:** 6.7 years of Binance daily bars, 34 coins (2020-01 to 2026-08). Splits fixed in a
 committed config before any run: train 2020-2023, validation 2024, test 2025-01 to 2026-08.
-Signals use data through the previous day only (delay 1), costs are 10 bps per side, and every
-look at the test window is counted.
+Signals use data through the previous day only (delay 1), costs are 10 bps per side, and 176
+looks at the test window are counted (walk-forward fold 3's validation and the post-hoc data
+splits are not; see Results).
 
-**Real-data result (Binance daily, 34 coins, test 2025-01 to 2026-08): test rank IC 0.082, but it
-is mostly a low-beta tilt in a market where the coin basket fell 66%, and its returns are
-indistinguishable from zero before and after costs.** The GP, an equal-budget random search and a one-line range factor all score
-about 0.08. After removing beta and size, IC 0.049 remains, and it comes from down days: the known
-low-volatility effect. Sources: `results/binance_*.json` (diagnostics post-hoc); survivorship-biased
+**Real-data result (Binance daily, 34 coins, test 2025-01 to 2026-08): test rank IC 0.082, but
+most of it is a fixed tilt (a ranking frozen at end-2024 scores 87% of it, a constant low-beta
+ranking 81%) in a market where the daily-rebalanced equal-weight basket of the 34 coins fell
+65.8%, and its returns are indistinguishable from zero before and after costs (gross t 0.96,
+Newey-West 0.91; net t 0.22, Newey-West 0.21).** The GP, an equal-budget random search and a
+one-line range factor all score about 0.08. After removing beta, 65% of the IC remains; after
+beta and size, IC 0.049 (60%), and it comes from down days, consistent with the known
+low-volatility effect (a 60-day low-volatility ranking scores 0.045 under the same
+neutralisation). Sources: `results/binance_*.json` (diagnostics post-hoc); survivorship-biased
 
 ![Cumulative net return on the test period: the GP pick, the random-search pick, the simple control and 20-day momentum all end between +0.04 and +0.10 summed over 607 days, while 1-day reversal loses 0.93](docs/figures/cumulative_net.png)
 
@@ -93,7 +98,7 @@ They never enter the GP, the hall of fame or the selection. The printed summary 
 **Controls and inference** (`gp.random_search`, `src/alpha_gp_lab/stats.py`). Random search draws
 the GP's budget of random expressions from its own generator and filter, with no breeding, and
 goes through the same validation rule and single test score. For the real-data pick, Newey-West
-t-statistics, a circular block bootstrap over days, Bonferroni over every look at the test window,
+t-statistics, a circular block bootstrap over days, Bonferroni over the counted looks at the test window,
 and post-hoc diagnostics (IC by market state, constant-ranking controls, IC after cross-sectional
 residualisation on trailing beta and size, per-coin P&L contributions) sit beside the i.i.d.
 t-statistic the evaluator prints.
@@ -114,9 +119,11 @@ bullet and a minus sign cannot be told apart). The demo and the tests read only 
 `qwen/qwen3.8-27b:free` (weights: Hugging Face `Qwen/Qwen3.8-27B` at revision
 `1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`, Apache-2.0; created on Hugging Face 2026-08-05,
 listed by OpenRouter 2026-08-14; sources: [Hugging Face model API](https://huggingface.co/api/models/Qwen/Qwen3.8-27B),
-[OpenRouter model list](https://openrouter.ai/api/v1/models)). No Anthropic or OpenAI model is
-used, by Oscar's decision. The request is temperature 0 with
-reasoning at effort low (the smallest the listing offers) and excluded from the response, and
+[OpenRouter model list](https://openrouter.ai/api/v1/models)). The seed proposer uses no
+Anthropic or OpenAI model, by Oscar's decision. The request is temperature 0 with
+reasoning at effort low (the smallest the listing offers; the dates, revision, effort list and
+free-tier limits in this paragraph were read from the live endpoints and no snapshot is
+committed, so they cannot be checked offline) and excluded from the response, and
 `max_tokens` 8192, which the hidden reasoning also counts against.
 Any non-200 status (429 is the rate limit), error field, unfinished answer, empty content,
 oversized body or response from another model is refused and nothing is saved; a refusal is not
@@ -213,8 +220,11 @@ CSV). `PYTHONPATH=src python3.11 -m alpha_gp_lab verify-data` prints `"ok": true
 the local copy. The CSVs are not in the repository.
 
 *Pre-registered setup.* `fixtures/binance_daily_config.json` and
-`fixtures/binance_walkforward_config.json` were committed in `3efa07d`, before any GP or baseline
-was run on the real data, and were not changed afterwards:
+`fixtures/binance_walkforward_config.json` were committed in `91823e6`, before any GP or baseline
+was run on the real data, and were not changed afterwards. Commit hashes were re-issued on
+2026-10-04 when commit authorship was re-attributed to Oscar's GitHub account; trees and dates
+are unchanged, and the old→new mapping is in [docs/commit-hash-map.txt](docs/commit-hash-map.txt).
+The configs fix:
 - train 2020-01-01 to 2023-12-31, validation 2024, test 2025-01-01 to 2026-08-31 (607 daily
   intervals);
 - delay 1 (signal from data through day t-1, held from the close of t to the close of t+1);
@@ -259,7 +269,7 @@ Command (exit 0, about 6 s):
 The script refuses to run unless its own portfolio loop reproduces the pick's committed gross and
 net. Every value below is in `results/binance_diagnostics.json`.
 
-**The market fell, and the IC came from the down days.** The equal-weighted 34-coin basket rose
+**The market fell, and the IC came from the down days.** The equal-weighted, daily-rebalanced 34-coin basket rose
 996% over train, rose 52.2% over validation and fell 65.8% over test (`basket_return`). The pick's
 daily IC has correlation -0.615 with the basket's daily return; its mean IC is 0.250 on the 307
 down days and -0.0893 on the 300 up days. The random-search pick (-0.635; 0.257 / -0.101) and the
@@ -300,7 +310,7 @@ There are 300 up days and 307 down days. Beta, not size, carries most of the til
 beta and size, IC 0.0489 remains (about 60% of the raw IC), but on up days it is 0.0113 with t 0.87,
 zero within noise: **the residual comes from the down days.**
 
-**The residual is the known low-volatility effect.** Under the same beta-and-size neutralisation
+**The residual resembles the known low-volatility effect.** Under the same beta-and-size neutralisation
 (`neutralised_references_beta_and_size`):
 
 | Reference ranking, neutralised on beta and size | Test IC (t; Newey-West t) | 95% interval | Up days (t) | Down days (t) |
@@ -310,8 +320,10 @@ zero within noise: **the residual comes from the down days.**
 
 A textbook 60-day volatility ranking scores almost the same residual IC as the GP's pick, with the
 same up/down pattern. Even a ranking frozen at the end of 2024 keeps 0.0197 after neutralisation,
-so part of the residual is still a fixed tilt rather than daily information. It is a known effect
-measured on one falling window, not evidence of a new or tradable signal.
+so part of the residual is still a fixed tilt rather than daily information. The evidence is
+resemblance: the pick was not neutralised on volatility, and the overlap of the two residuals was
+not measured. Either way it looks like a known effect measured on one falling window, not evidence
+of a new or tradable signal.
 
 **Why the P&L is about zero, before costs as well as after.** Test gross is 3.53e-4 per day with
 t 0.959 (Newey-West 0.910): not significant before costs either. One coin explains it: ZECUSDT rose
@@ -329,8 +341,8 @@ that, and spread and slippage on the short leg come on top.
 #### Follow-up analyses (pre-registered after the main result)
 
 Plan: `fixtures/binance_analysis_config.json` and `scripts/analyze_binance.py`, committed in
-`c5e212e` at 18:15:39, before either was run on real data but **19 minutes after the main test
-results were committed** (`2eeb94a`, 17:56:41). Its seeds, budget, bootstrap and decision rules
+`881147e` at 18:15:39, before either was run on real data but **19 minutes after the main test
+results were committed** (`fea7780`, 17:56:41). Its seeds, budget, bootstrap and decision rules
 were fixed before it ran, but it was written knowing the pick and its test score; in particular
 the range control was chosen because the pick looked like a range measure
 ([timeline](docs/real-data-runs.md#timeline-what-each-plan-could-have-seen)). Command (run once,
@@ -361,8 +373,8 @@ random search scores 640 distinct expressions to the GP's 487, which slightly fa
   search on test IC** (1.07 SE). It passes the rule on test net (3.06 SE), but that is **not
   evidence of out-of-sample net alpha**: all 40 searches share one test window, so the SE measures
   how consistently GP picks smoother signals, not whether smoother signals earn more in another
-  period. A post-hoc description: the random picks are mostly raw one-day range ratios such as
-  `low / high`, with a mean test turnover of 0.373 against 0.142 for the GP picks (means of
+  period. A post-hoc description: 7 of the 20 random picks are raw one- or two-day range ratios
+  such as `low / high`, with a mean test turnover of 0.373 against 0.142 for the GP picks (means of
   `per_seed[].test.mean_turnover`); the GP's net edge looks like smoothing, not a better signal.
 
 **2. Serial dependence and the multiple-testing family.**
@@ -383,8 +395,10 @@ random search scores 640 distinct expressions to the GP's 487, which slightly fa
 | momentum_20d | -0.0294 to 0.0170 | -7.48e-4 to 9.83e-4 | 0.451 |
 | reversal_1d | -0.0135 to 0.0374 | -2.37e-3 to -6.98e-4 | 1.0 |
 
-- The family that matters is every look at the 2025-01 to 2026-08 window, not the expressions the
-  search tried on train and validation (those never saw test). Counted in
+- The family that matters is the looks at the 2025-01 to 2026-08 window, not the expressions the
+  search tried on train and validation (those never saw test). Not counted: walk-forward fold 3,
+  which scored its 16 validation candidates on 2025, inside this window, and the post-hoc data
+  splits (up/down days, the without-ZEC test at gross t 2.48). Counted in
   `fixtures/binance_diagnostics_config.json`: 3 in the main run (pick and 2 baselines), 40 in the
   follow-up (19 more GP seeds, 20 random-search seeds, the range control), 6 from walk-forward
   folds 2 and 3 (sub-windows of this one), 7 post-hoc diagnostics, and the 120 grid hypotheses of
@@ -404,8 +418,9 @@ with the 10-day mean range and 0.687 / 0.720 with negative 20-day realised volat
 the plain 10-day mean of `(close - low) / close` negated, does as well: test IC 0.0817 vs 0.0821
 (difference interval -0.00445 to 0.00525), net 1.53e-4 vs 8.05e-5 per day (difference interval
 -2.25e-4 to 7.96e-5) (`pick_minus.range_10d`). **A one-line, non-GP version captures the pick**,
-and the diagnostics above say what both capture on this window: mostly low beta in a falling
-alt market.
+and the diagnostics above say what both capture on this window: mostly a fixed tilt (frozen
+ranking 87%, constant low-beta ranking 81%) in a falling alt market, with 60% of the IC left after
+beta and size neutralisation.
 
 **4. Figures** (`scripts/plot_binance.py`, run with matplotlib from the shared venv; the library
 does not need it). Rolling 60-day mean test IC:
@@ -438,15 +453,15 @@ evidence for the main pick.
 
 #### LLM seeds: not run
 
-**Live LLM seeds pending: CLI login expired on 2026-10-03.** The single permitted live call,
+**Live LLM seeds pending: CLI not signed in on 2026-10-03.** The one live call made (of 3 allowed),
 `PYTHONPATH=src python3.11 -m alpha_gp_lab seeds --live --config fixtures/binance_daily_config.json`,
 exited 1 before reaching a model (0 input and 0 output tokens; `results/llm_live_attempt.json`).
 No retry was made. The seeded config (`fixtures/binance_daily_seeded_config.json`, pre-registered
-in `3efa07d`) has not been run, so there is no seeded-vs-ablation comparison on real data; the main
+in `91823e6`) has not been run, so there is no seeded-vs-ablation comparison on real data; the main
 run is the ablation without seeds. The live path now uses the pinned open-weight model
 `qwen/qwen3.8-27b:free` on OpenRouter, by Oscar's decision on 2026-10-05.
 
-*Note added 2026-10-05, before any live call reached a model:* the `3efa07d` pre-registration
+*Note added 2026-10-05, before any live call reached a model:* the `91823e6` pre-registration
 described the live seeds as coming from `claude -p`. The proposer model has changed to the pinned
 open-weight model above; the seeded config's bytes (brief, n, splits, GP settings) are unchanged.
 
@@ -457,8 +472,10 @@ Ten real-data commands so far, all listed with their code version and exit code 
 live LLM call, three main runs and two walk-forward runs (repeats only added printed fields and
 reproduced every earlier number), the follow-up analysis and two runs of the post-hoc diagnostics (the second added fields and
 reproduced the first). One main
-config, one walk-forward config and one main GP seed were pre-registered; no config, seed or
-threshold was changed after a real-data result.
+config, one walk-forward config and one main GP seed were pre-registered; no pre-registered
+config, seed or threshold was changed after a real-data result. The post-hoc diagnostics config
+was extended once after its first real-data run (round 2: two neutralised reference rankings,
+5 to 7 looks).
 
 ### Synthetic results
 
@@ -541,7 +558,7 @@ chosen on a validation window that was partly momentum and then tested on pure n
 
 ### Tests and runtime
 
-- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 104 tests` and `OK`.
+- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 121 tests` and `OK`.
 - `python3.11 tests/hand_cases.py` re-derives the evaluator's arithmetic in exact Fractions:
   for example IC 2/5, turnover 2, gross 1/20 and net 49/1000 on a four-asset case.
 - On the development machine the demo printed `demo finished in 9.6s` to stderr on its last run, and
@@ -609,7 +626,8 @@ src/alpha_gp_lab/
   cli.py           demo | walkforward | run | verify | seeds | verify-data
 scripts/           check.sh, demo.sh, fetch_binance_daily.py, analyze_binance.py,
                    diagnose_binance.py (post-hoc), plot_binance.py
-.github/workflows/ ci.yml: runs check.sh on Python 3.11 (not yet run on GitHub)
+.github/workflows/ ci.yml: runs check.sh on Python 3.11 (passed on main at 9ecf2ce, 2026-10-04;
+                   real-data steps skip there)
 fixtures/          configs (SYNTHETIC and Binance), binance_universe.json, LLM replay
 results/           printed summaries of the real-data runs, the follow-up analysis, the post-hoc
                    diagnostics, the failed live-LLM attempt
@@ -634,10 +652,10 @@ Diagrams of the data flow, the split roles and the lineage schema are in
   range-factor control, the bootstrap and the comparisons above). Across the portfolio, the sibling
   repo asof-research ran its own pre-registered study on the same 34 pairs, splits, costs and
   baselines, committed shortly after this repo's real-data results. Counted together, the window
-  has had 176 looks (see Results). The follow-up plan was committed 19 minutes after the main test
+  has had at least 176 looks (see Results for what is not counted). The follow-up plan was committed 19 minutes after the main test
   result and the diagnostics after a reviewer's probes, so neither was blind to it. Repeated looks
   at one window weaken it as out-of-sample evidence, and the window is one draw of a market in
-  which small alts fell 66% against majors.
+  which the daily-rebalanced equal-weight 34-coin basket fell 65.8%.
 - **One venue.** Binance spot prices and volumes only, with no cross-check against other
   exchanges.
 - **Daily bars.** UTC close-to-close days. Delay 1 means a signal uses data through the close of
@@ -660,11 +678,12 @@ Diagrams of the data flow, the split roles and the lineage schema are in
 - **Selection and multiple testing.** Validation picks the best of up to 16 hall-of-fame
   candidates, which the GP bred from hundreds of train-scored expressions; that selection used
   data the test never saw. The `run` output's t-statistics assume independent days; the follow-up
-  adds Newey-West t-statistics, block-bootstrap intervals and a Bonferroni bound over every look at
-  the test window, for the main pick only. No White Reality Check or SPA test has been run over
+  adds Newey-West t-statistics, block-bootstrap intervals and a Bonferroni bound over the 176 counted
+  looks at the test window, for the main pick only. No White Reality Check or SPA test has been run over
   those looks, and none of these corrections handles a single-window market tilt.
 - **The GP adds little here.** On this data an equal-budget random search matches it on test IC,
-  and a one-line range measure matches its pick. What remains is mostly a low-beta tilt; the main
+  and a one-line range measure matches its pick. What remains is mostly a fixed tilt (frozen ranking
+  87%, constant low-beta ranking 81%; 60% survives beta and size neutralisation); the main
   evidence is about that, not about genetic programming.
 - **The grammar has no units in the recorded runs.** Raw price and volume levels can be ranked
   across coins, where they act as size proxies (6 of 20 GP seed picks, 4 of 20 random-search
