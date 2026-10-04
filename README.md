@@ -110,10 +110,19 @@ brief and the grammar (never data) asks for N expressions. Responses are cached 
 replay file keyed by the SHA-256 of the exact prompt. Every proposed line is parsed; invalid
 lines are logged, rejected and counted (a line starting `- ` is rejected too, because a list
 bullet and a minus sign cannot be told apart). The demo and the tests read only the replay file.
-`seeds --live` calls the local `claude -p` CLI with the prompt on stdin, every tool disabled and
-an empty working directory, and saves the answer labelled **REAL LLM OUTPUT** with the CLI
-version, model and date. A run with `use_seeds: false` reads no LLM output at all. The one live
-attempt so far failed before reaching a model (see Results). The only shipped replay entry is
+`seeds --live` makes one request to a free hosted open-weight model on OpenRouter, pinned as
+`qwen/qwen3.8-27b:free` (weights: Hugging Face `Qwen/Qwen3.8-27B` at revision
+`1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`, Apache-2.0; created on Hugging Face 2026-08-05,
+listed by OpenRouter 2026-08-14; sources: [Hugging Face model API](https://huggingface.co/api/models/Qwen/Qwen3.8-27B),
+[OpenRouter model list](https://openrouter.ai/api/v1/models)). No Anthropic or OpenAI model is
+used, by Oscar's decision. The request is temperature 0 with reasoning off and bounded output.
+Any non-200 status (429 is the rate limit), error field, unfinished answer, empty content,
+oversized body or response from another model is refused and nothing is saved; a refusal is not
+retried, since the free tier allows 20 requests a minute and 50 a day without purchased credits.
+An accepted answer is saved labelled **REAL LLM OUTPUT** with the response's model, provider,
+response id and date. The key is read from `OPENROUTER_API_KEY` and never saved. A run with
+`use_seeds: false` reads no LLM output at all. The one live attempt so far (through `claude -p`,
+before the switch) failed before reaching a model (see Results). The only shipped replay entry is
 labelled **HAND-WRITTEN FIXTURE (not real LLM output)**. It was written while building this repo,
 by someone who knew how the synthetic data is generated, and it deliberately contains one
 duplicate and three invalid lines. It is used by the SYNTHETIC demo only.
@@ -432,7 +441,12 @@ evidence for the main pick.
 exited 1 before reaching a model (0 input and 0 output tokens; `results/llm_live_attempt.json`).
 No retry was made. The seeded config (`fixtures/binance_daily_seeded_config.json`, pre-registered
 in `3efa07d`) has not been run, so there is no seeded-vs-ablation comparison on real data; the main
-run is the ablation without seeds.
+run is the ablation without seeds. The live path now uses the pinned open-weight model
+`qwen/qwen3.8-27b:free` on OpenRouter, by Oscar's decision on 2026-10-05.
+
+*Note added 2026-10-05, before any live call reached a model:* the `3efa07d` pre-registration
+described the live seeds as coming from `claude -p`. The proposer model has changed to the pinned
+open-weight model above; the seeded config's bytes (brief, n, splits, GP settings) are unchanged.
 
 #### Every real-data run
 
@@ -573,8 +587,9 @@ python3.11 scripts/diagnose_binance.py --config fixtures/binance_diagnostics_con
 
 `check.sh` runs `verify-data` and re-runs the main real-data config against
 `results/binance_daily_main.json` when `data/binance-daily/` exists, and prints a skip message
-when it does not. `seeds --live --config <config>` refreshes a replay entry through the local
-`claude -p` CLI; it spends LLM quota and needs the CLI to be signed in.
+when it does not. `seeds --live --config <config>` refreshes a replay entry with one request to
+the pinned OpenRouter model; it needs `OPENROUTER_API_KEY` (or the file
+`~/.config/openrouter/api_key`) and fails loudly without it.
 
 ## Architecture
 
@@ -586,7 +601,7 @@ src/alpha_gp_lab/
                    equal-budget random search
   stats.py         Newey-West t, circular block bootstrap, normal p-value, Bonferroni, OLS residuals
   data.py          Panel, SYNTHETIC regime generator, OHLCV CSV loader, pinned-universe check
-  llm_seed.py      prompt, hash-keyed replay cache, grammar validation, optional claude -p
+  llm_seed.py      prompt, hash-keyed replay cache, grammar validation, optional OpenRouter call
   store.py         run bundle, append-only SQLite lineage, manifest, verify
   config.py        strict config validation, index or date splits, fold lists, walk-forward folds
   cli.py           demo | walkforward | run | verify | seeds | verify-data
@@ -669,7 +684,8 @@ Diagrams of the data flow, the split roles and the lineage schema are in
   low-order float bits. The numbers above were produced on one machine only.
 - **Replay is not a signature.** `verify` detects accidental or casual alteration, but someone
   who controls the code and every file can forge a consistent bundle.
-- The live LLM path is tested only against a fake `claude` executable.
+- The live LLM path is tested only against canned OpenRouter responses and a loopback HTTP
+  server; no request has reached OpenRouter yet.
 
 ## What I learned
 

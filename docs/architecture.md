@@ -9,7 +9,7 @@ flowchart LR
         SYN[data.synthetic_panel<br/>SYNTHETIC regimes]
         CSV[data.load_csv_dir<br/>daily OHLCV CSVs]
         BIN[scripts/fetch_binance_daily.py<br/>pinned by fixtures/binance_universe.json]
-        LLM[llm_seed.propose<br/>replay file by default<br/>--live: claude -p]
+        LLM[llm_seed.propose<br/>replay file by default<br/>--live: OpenRouter,<br/>pinned open-weight model]
     end
     BIN -. writes .-> CSV
     LLM -->|every line parsed;<br/>invalid lines logged + rejected| SEEDS[accepted seed expressions]
@@ -49,7 +49,7 @@ selection to come out byte-identical.
 | `gp.py` | Random trees, crossover, mutation, the generation loop, hall of fame, validation selection with the correlation filter, fixed baseline expressions scored on the same splits, walk-forward folds, and `random_search`: the equal-budget control that shares the admission filter and the validation rule |
 | `stats.py` | Newey-West t-statistic, circular block bootstrap of a mean, normal p-value, Bonferroni bound, OLS residuals for neutralisation |
 | `data.py` | `Panel`, the SYNTHETIC multi-regime generator, the CSV-directory loader, the pinned-universe check behind `verify-data` |
-| `llm_seed.py` | Prompt, prompt-hash replay cache, grammar validation of every proposed line, optional live refresh through `claude -p` |
+| `llm_seed.py` | Prompt, prompt-hash replay cache, grammar validation of every proposed line, optional live refresh through one request to the pinned open-weight model on OpenRouter (`qwen/qwen3.8-27b:free`) |
 | `store.py` | Run bundle writer, append-only SQLite schema with triggers, completion manifest, `verify` replay |
 | `config.py` | Strict config validation and fold construction (index or ISO-date spans; one fold, a listed set, or rolling) |
 | `cli.py` | `demo`, `walkforward`, `run`, `verify`, `seeds`, `verify-data` |

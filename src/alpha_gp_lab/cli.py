@@ -1,6 +1,7 @@
 """Command line: demo, walkforward, run, verify, seeds, verify-data."""
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 import time
@@ -8,12 +9,22 @@ import time
 from . import store
 from .config import read_json, validate
 from .data import check_universe, load_csv_dir, synthetic_from_config
-from .llm_seed import no_seeds, propose
+from .llm_seed import KEY_ENV, no_seeds, propose
 
 ROOT = Path(__file__).resolve().parents[2]
 DEMO_CONFIG = ROOT / 'fixtures' / 'demo_config.json'
 WALK_FORWARD_CONFIG = ROOT / 'fixtures' / 'walkforward_config.json'
 UNIVERSE = ROOT / 'fixtures' / 'binance_universe.json'
+
+
+def load_key_file(path=None):
+    """Put the OpenRouter key from ~/.config/openrouter/api_key into the environment if it is not set there.
+
+    The key is never printed. With neither the variable nor the file, ``llm_seed.openrouter`` refuses loudly.
+    """
+    path = Path(path) if path else Path.home() / '.config' / 'openrouter' / 'api_key'
+    if not os.environ.get(KEY_ENV, '').strip() and path.is_file():
+        os.environ[KEY_ENV] = path.read_text(encoding='utf-8').strip()
 
 
 def seed_record(config, config_path, live=False):
@@ -83,7 +94,8 @@ def main(argv=None):
     p = sub.add_parser('seeds', help='show the LLM seed proposals for a config (replay file by default)')
     p.add_argument('--config', default=str(DEMO_CONFIG))
     p.add_argument('--live', action='store_true',
-                   help='call the local `claude -p` CLI and refresh the replay cache (spends LLM quota)')
+                   help='make one request to the pinned open-weight model on OpenRouter and refresh the replay cache '
+                        '(needs OPENROUTER_API_KEY or ~/.config/openrouter/api_key)')
     args = parser.parse_args(argv)
 
     if args.command == 'verify-data':
@@ -94,6 +106,8 @@ def main(argv=None):
                               ok=not problems, problems=problems), indent=2))
         return 1 if problems else 0
     if args.command == 'seeds':
+        if args.live:
+            load_key_file()
         llm = seed_record(validate(read_json(Path(args.config).read_bytes())), args.config, live=args.live)
         print(json.dumps({k: llm[k] for k in ('source', 'prompt_sha256', 'requested', 'accepted', 'rejected', 'duplicates')}, indent=2))
         return 0

@@ -1,14 +1,17 @@
-"""Date-based folds, fixed baselines, the pinned-universe check and the live-LLM subprocess seam."""
+"""Date-based folds, fixed baselines, the pinned-universe check and the live-LLM HTTP seam."""
 import copy
 import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 import shutil
-import stat
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
+import urllib.error
 from pathlib import Path
 
 from helpers import ROOT, inputs, perturbed, small_config
@@ -162,44 +165,78 @@ class Universe(unittest.TestCase):
         self.assertIn('survivor', u['survivorship_bias'])
 
 
-FAKE_CLAUDE = '''#!{python}
-import json, os, sys
-if sys.argv[1:] == ['--version']:
-    print('9.9.9 (Fake)'); sys.exit(0)
-log = {{'args': sys.argv[1:], 'stdin': sys.stdin.read(), 'cwd_files': os.listdir('.')}}
-open(os.environ['FAKE_CLAUDE_LOG'], 'w').write(json.dumps(log))
-if os.environ.get('FAKE_CLAUDE_FAIL'):
-    print(json.dumps({{'type': 'result', 'is_error': True, 'result': 'Not logged in', 'modelUsage': {{}}}})); sys.exit(1)
-print(json.dumps({{'type': 'result', 'is_error': False, 'result': 'rank(close)\\n', 'modelUsage': {{'fake-model-1': {{}}}}}}))
-'''
+class _Handler(BaseHTTPRequestHandler):
+    """A loopback stand-in for OpenRouter: each path selects one behaviour. Nothing leaves the machine."""
+    seen = []
+
+    def do_POST(self):
+        body = self.rfile.read(int(self.headers['Content-Length']))
+        type(self).seen.append(dict(path=self.path, headers=dict(self.headers), body=body))
+        if self.path == '/slow':
+            time.sleep(1)
+        status, payload, extra = {
+            '/ok': (200, b'{"ok": true}', {}),
+            '/limited': (429, b'{"error": {"message": "slow down"}}', {}),
+            '/moved': (302, b'', {'Location': '/elsewhere'}),
+            '/huge': (200, b'x' * (llm_seed.MAX_BODY_BYTES + 100), {}),
+            '/slow': (200, b'late', {}),
+        }[self.path]
+        self.send_response(status)
+        for k, v in extra.items():
+            self.send_header(k, v)
+        self.send_header('Content-Length', str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def do_GET(self):
+        type(self).seen.append(dict(path=self.path, headers=dict(self.headers), body=b''))
+        self.send_response(200)
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass
 
 
-class ClaudeCli(unittest.TestCase):
-    def call(self, **env):
-        with tempfile.TemporaryDirectory() as tmp:
-            exe = Path(tmp) / 'claude'
-            exe.write_text(FAKE_CLAUDE.format(python=sys.executable))
-            exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
-            log = Path(tmp) / 'log.json'
-            old = dict(os.environ)
-            os.environ.update(PATH=tmp + os.pathsep + old['PATH'], FAKE_CLAUDE_LOG=str(log), **env)
-            try:
-                return llm_seed.claude_cli('PROMPT TEXT'), json.loads(log.read_text())
-            finally:
-                os.environ.clear()
-                os.environ.update(old)
+class OpenRouterHttp(unittest.TestCase):
+    """``llm_seed.http_post`` against a real socket on 127.0.0.1: the seam the unit fakes stand in for."""
 
-    def test_prompt_on_stdin_no_tools_empty_directory(self):
-        (text, via), seen = self.call()
-        self.assertEqual((text, via), ('rank(close)\n', 'claude -p (9.9.9 (Fake)), model fake-model-1'))
-        self.assertEqual(seen['stdin'], 'PROMPT TEXT')
-        self.assertEqual(seen['cwd_files'], [])
-        self.assertEqual(seen['args'][seen['args'].index('--tools') + 1], '')
-        self.assertNotIn('PROMPT TEXT', seen['args'])
+    @classmethod
+    def setUpClass(cls):
+        cls.server = ThreadingHTTPServer(('127.0.0.1', 0), _Handler)
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        cls.base = f'http://127.0.0.1:{cls.server.server_address[1]}'
 
-    def test_a_failed_call_raises_with_the_cli_message(self):
-        with self.assertRaisesRegex(RuntimeError, 'exit 1.*Not logged in'):
-            self.call(FAKE_CLAUDE_FAIL='1')
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def setUp(self):
+        _Handler.seen.clear()
+
+    def post(self, path, timeout=5):
+        return llm_seed.http_post(self.base + path, {'Authorization': 'Bearer k', 'Content-Type': 'application/json'},
+                                  b'{"q": 1}', timeout)
+
+    def test_post_sends_headers_and_body_and_returns_status_and_body(self):
+        self.assertEqual(self.post('/ok'), (200, b'{"ok": true}'))
+        self.assertEqual(_Handler.seen[0]['body'], b'{"q": 1}')
+        self.assertEqual(_Handler.seen[0]['headers']['Authorization'], 'Bearer k')
+
+    def test_error_status_is_returned_not_raised(self):
+        self.assertEqual(self.post('/limited'), (429, b'{"error": {"message": "slow down"}}'))
+
+    def test_a_redirect_is_not_followed_so_the_key_goes_nowhere_else(self):
+        self.assertEqual(self.post('/moved')[0], 302)
+        self.assertEqual([s['path'] for s in _Handler.seen], ['/moved'])
+
+    def test_the_body_read_is_capped(self):
+        status, body = self.post('/huge')
+        self.assertEqual((status, len(body)), (200, llm_seed.MAX_BODY_BYTES + 1))
+
+    def test_the_timeout_applies(self):
+        with self.assertRaises((TimeoutError, urllib.error.URLError)):
+            self.post('/slow', timeout=0.2)
 
 
 if __name__ == '__main__':

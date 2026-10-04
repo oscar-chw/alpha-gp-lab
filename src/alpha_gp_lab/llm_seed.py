@@ -5,9 +5,9 @@ cannot promote anything: each line it returns must parse under ``grammar.parse``
 logged and rejected, and accepted seeds still have to earn their place in the GP on train.
 
 Responses are cached in a JSON replay file keyed by the SHA-256 of the exact prompt. Normal
-runs and every test read the replay file only. ``live=True`` (the CLI's ``--live``) calls the
-local ``claude -p`` CLI to refresh the cache entry; that spends the operator's quota and is
-never invoked by tests or the demo.
+runs and every test read the replay file only. ``live=True`` (the CLI's ``--live``) makes one
+request to a pinned open-weight model on OpenRouter to refresh the cache entry; that spends the
+operator's free-tier allowance and is never invoked by tests or the demo.
 """
 from datetime import date
 import hashlib
@@ -16,9 +16,8 @@ import logging
 import os
 from pathlib import Path
 import re
-import shutil
-import subprocess
-import tempfile
+import urllib.error
+import urllib.request
 
 from .grammar import canonical, grammar_doc, parse
 
@@ -27,6 +26,20 @@ FIXTURE_SOURCE = 'HAND-WRITTEN FIXTURE (not real LLM output)'
 LIVE_SOURCE = 'REAL LLM OUTPUT'
 NO_SEEDS_SOURCE = 'none: use_seeds is false, no LLM output read'
 _BULLET = re.compile(r'^(?:\*\s+|\d+[.)]\s*)')   # '* x', '1. x', '2) x'
+
+# The live proposer. Oscar's decision (2026-10-05): no Anthropic or OpenAI model, in any form.
+# Free hosted open weights: Hugging Face Qwen/Qwen3.8-27B at revision
+# 1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0, Apache-2.0 (HF createdAt 2026-08-05; OpenRouter
+# listed it 2026-08-14); the README names the sources. Free tier: 20 requests/minute, 50/day
+# without purchased credits, so a refusal is never retried.
+OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+MODEL = 'qwen/qwen3.8-27b:free'
+MODEL_WEIGHTS = 'Qwen/Qwen3.8-27B@1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0 (Apache-2.0)'
+KEY_ENV = 'OPENROUTER_API_KEY'
+# A list of short expressions fits well inside this; a longer answer stops with finish_reason
+# 'length' and is refused rather than saved truncated.
+MAX_TOKENS = 1024
+MAX_BODY_BYTES = 1_000_000   # a body this large is not an answer to the prompt; refuse it unparsed
 
 
 def build_prompt(brief, n):
@@ -68,35 +81,77 @@ def parse_response(text):
     return accepted, rejected, duplicates
 
 
-def claude_cli(prompt, timeout=600):
-    """Ask the local Claude Code CLI in print mode; return (response text, label naming CLI and model).
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect would resend the Authorization header to wherever it points; refuse it instead."""
 
-    Only reached through ``live=True``. The prompt goes in on stdin, every tool is disabled and
-    the working directory is empty, so the model sees the brief and the grammar and cannot read
-    any data file.
-    """
-    exe = shutil.which('claude')
-    if exe is None:
-        raise RuntimeError('live mode needs the `claude` CLI on PATH')
-    version = subprocess.run([exe, '--version'], capture_output=True, text=True, timeout=60).stdout.strip()
-    with tempfile.TemporaryDirectory() as empty:
-        done = subprocess.run([exe, '-p', '--output-format', 'json', '--no-session-persistence', '--tools', ''],
-                              input=prompt, capture_output=True, text=True, timeout=timeout, cwd=empty)
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def http_post(url, headers, body, timeout):
+    """POST ``body``; return (status, at most MAX_BODY_BYTES + 1 bytes of the response body)."""
+    request = urllib.request.Request(url, data=body, headers=headers, method='POST')
     try:
-        out = json.loads(done.stdout)
+        with urllib.request.build_opener(_NoRedirect).open(request, timeout=timeout) as response:
+            return response.status, response.read(MAX_BODY_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read(MAX_BODY_BYTES + 1)
+
+
+def openrouter(prompt, post=http_post, timeout=120):
+    """Make one request to the pinned model; return (response text, label naming model, provider, id).
+
+    Only reached through ``live=True``. The model sees the prompt and nothing else. The key is read
+    from the ``OPENROUTER_API_KEY`` environment variable only, and every message that could be
+    shown has it removed. Any doubtful response raises, so ``propose`` saves nothing.
+    """
+    key = os.environ.get(KEY_ENV, '').strip()
+    if not key:
+        raise RuntimeError(f'live mode needs {KEY_ENV} set (an OpenRouter API key); nothing was sent')
+
+    def refuse(why):
+        raise RuntimeError(f'OpenRouter {MODEL}: {why}'.replace(key, '[key]'))
+    body = json.dumps(dict(model=MODEL, messages=[dict(role='user', content=prompt)], temperature=0,
+                           max_tokens=MAX_TOKENS, reasoning=dict(effort='none'))).encode()
+    status, raw = post(OPENROUTER_URL, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+                       body, timeout)
+    if len(raw) > MAX_BODY_BYTES:
+        refuse(f'response body over {MAX_BODY_BYTES} bytes (HTTP {status})')
+    try:
+        out = json.loads(raw)
     except ValueError:
-        out = {}
-    if done.returncode != 0 or out.get('is_error') or not isinstance(out.get('result'), str):
-        detail = out.get('result') or done.stderr or done.stdout
-        raise RuntimeError(f'claude -p failed (exit {done.returncode}): {str(detail).strip()[:500]}')
-    models = ', '.join(sorted(out.get('modelUsage') or {})) or 'model not reported'
-    return out['result'], f'claude -p ({version}), model {models}'
+        out = None
+    if status != 200:
+        detail = out.get('error') if isinstance(out, dict) else None
+        detail = detail.get('message', detail) if isinstance(detail, dict) else detail or raw.decode(errors='replace')
+        refuse(f'HTTP {status}{" (rate limit)" if status == 429 else ""}: {str(detail).strip()[-500:]}')
+    if not isinstance(out, dict):
+        refuse('response is not a JSON object')
+    if out.get('error'):
+        refuse(f'error in response: {str(out["error"])[-500:]}')
+    choices = out.get('choices')
+    choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
+    if choice is None:
+        refuse('response has no choices')
+    if choice.get('error'):
+        refuse(f'error in choice: {str(choice["error"])[-500:]}')
+    if choice.get('finish_reason') != 'stop':
+        refuse(f'finish_reason {choice.get("finish_reason")!r}, not "stop"')
+    message = choice.get('message')
+    content = message.get('content') if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        refuse('response content is empty or not text')
+    if out.get('model') not in (MODEL, MODEL.removesuffix(':free')):
+        refuse(f'response came from model {out.get("model")!r}, not the pinned {MODEL!r}')
+    return content, (f'OpenRouter {MODEL}, weights {MODEL_WEIGHTS}, response model {out["model"]}, '
+                     f'provider {out.get("provider") or "not reported"}, id {out.get("id") or "not reported"}')
 
 
 def _note(entries):
     if any(e['source'] == FIXTURE_SOURCE for e in entries.values()):
         return 'Contains HAND-WRITTEN FIXTURE entries (not real LLM output); each entry names its source.'
-    return 'REAL LLM OUTPUT: every entry is a live claude -p response; each entry names its model and date.'
+    return ('REAL LLM OUTPUT: every entry is a live OpenRouter response from the pinned open-weight model; '
+            'each entry names its model, provider, response id and date.')
 
 
 def _load(path):
@@ -109,7 +164,7 @@ def _load(path):
     return cache
 
 
-def propose(brief, n, replay_path, live=False, runner=claude_cli):
+def propose(brief, n, replay_path, live=False, runner=openrouter):
     """Return the seed record used by a run: prompt, source label, raw response and the verdicts."""
     prompt = build_prompt(brief, n)
     key = prompt_sha256(prompt)
@@ -124,7 +179,7 @@ def propose(brief, n, replay_path, live=False, runner=claude_cli):
         os.replace(tmp, replay_path)
     entry = cache['entries'].get(key)
     if entry is None:
-        raise KeyError(f'no replay entry for prompt {key[:12]}; refresh it with --live (spends LLM quota)')
+        raise KeyError(f'no replay entry for prompt {key[:12]}; refresh it with --live (one OpenRouter request)')
     if entry.get('prompt') != prompt:
         raise ValueError(f'replay entry {key[:12]} stores a different prompt')
     accepted, rejected, duplicates = parse_response(entry['response'])
