@@ -121,9 +121,9 @@ bullet and a minus sign cannot be told apart). The demo and the tests read only 
 listed by OpenRouter 2026-08-14; sources: [Hugging Face model API](https://huggingface.co/api/models/Qwen/Qwen3.8-27B),
 [OpenRouter model list](https://openrouter.ai/api/v1/models)). The seed proposer uses no
 Anthropic or OpenAI model, by Oscar's decision. The request is temperature 0 with
-reasoning at effort low (the smallest the listing offers; the dates, revision, effort list and
-free-tier limits in this paragraph were read from the live endpoints and no snapshot is
-committed, so they cannot be checked offline) and excluded from the response, and
+reasoning at effort low (the smallest the listing offers; the dates, revision and effort list are in the committed
+[model evidence](docs/model-evidence/README.md); the free-tier limits are from OpenRouter's
+[limits page](https://openrouter.ai/docs/api-reference/limits), read 2026-10-05) and excluded from the response, and
 `max_tokens` 8192, which the hidden reasoning also counts against.
 Any non-200 status (429 is the rate limit), error field, unfinished answer, empty content,
 oversized body or response from another model is refused and nothing is saved; a refusal is not
