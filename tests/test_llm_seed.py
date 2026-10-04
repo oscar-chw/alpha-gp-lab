@@ -132,7 +132,8 @@ class OpenRouter(unittest.TestCase):
         self.assertEqual(call['url'], 'https://openrouter.ai/api/v1/chat/completions')
         self.assertEqual(call['headers']['Authorization'], 'Bearer ' + KEY)
         self.assertEqual(call['body'], {'model': PINNED, 'messages': [{'role': 'user', 'content': 'PROMPT'}],
-                                        'temperature': 0, 'max_tokens': 1024, 'reasoning': {'effort': 'none'}})
+                                        'temperature': 0, 'max_tokens': 8192,
+                                        'reasoning': {'effort': 'low', 'exclude': True}})
         self.assertEqual(call['timeout'], 7)
         self.assertEqual(via, f'OpenRouter {PINNED}, weights Qwen/Qwen3.8-27B@1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0 '
                               f'(Apache-2.0), response model {PINNED}, provider FakeProvider, id gen-fake-1')

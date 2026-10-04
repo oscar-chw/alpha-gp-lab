@@ -115,7 +115,9 @@ bullet and a minus sign cannot be told apart). The demo and the tests read only 
 `1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`, Apache-2.0; created on Hugging Face 2026-08-05,
 listed by OpenRouter 2026-08-14; sources: [Hugging Face model API](https://huggingface.co/api/models/Qwen/Qwen3.8-27B),
 [OpenRouter model list](https://openrouter.ai/api/v1/models)). No Anthropic or OpenAI model is
-used, by Oscar's decision. The request is temperature 0 with reasoning off and bounded output.
+used, by Oscar's decision. The request is temperature 0 with
+reasoning at effort low (the smallest the listing offers) and excluded from the response, and
+`max_tokens` 8192, which the hidden reasoning also counts against.
 Any non-200 status (429 is the rate limit), error field, unfinished answer, empty content,
 oversized body or response from another model is refused and nothing is saved; a refusal is not
 retried, since the free tier allows 20 requests a minute and 50 a day without purchased credits.

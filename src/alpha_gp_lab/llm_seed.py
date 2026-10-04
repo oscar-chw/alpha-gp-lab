@@ -36,9 +36,14 @@ OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 MODEL = 'qwen/qwen3.8-27b:free'
 MODEL_WEIGHTS = 'Qwen/Qwen3.8-27B@1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0 (Apache-2.0)'
 KEY_ENV = 'OPENROUTER_API_KEY'
-# A list of short expressions fits well inside this; a longer answer stops with finish_reason
-# 'length' and is refused rather than saved truncated.
-MAX_TOKENS = 1024
+# Hidden reasoning counts against this too, so it is sized for reasoning plus a short list of
+# expressions; a longer answer stops with finish_reason 'length' and is refused rather than
+# saved truncated.
+MAX_TOKENS = 8192
+# The listing offers efforts xhigh, medium and low (default xhigh) and not 'none', which could be
+# refused or silently run at xhigh; 'low' is the smallest offered. exclude keeps the reasoning
+# text out of the response.
+REASONING = dict(effort='low', exclude=True)
 MAX_BODY_BYTES = 1_000_000   # a body this large is not an answer to the prompt; refuse it unparsed
 
 
@@ -112,7 +117,7 @@ def openrouter(prompt, post=http_post, timeout=120):
     def refuse(why):
         raise RuntimeError(f'OpenRouter {MODEL}: {why}'.replace(key, '[key]'))
     body = json.dumps(dict(model=MODEL, messages=[dict(role='user', content=prompt)], temperature=0,
-                           max_tokens=MAX_TOKENS, reasoning=dict(effort='none'))).encode()
+                           max_tokens=MAX_TOKENS, reasoning=REASONING)).encode()
     status, raw = post(OPENROUTER_URL, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
                        body, timeout)
     if len(raw) > MAX_BODY_BYTES:
