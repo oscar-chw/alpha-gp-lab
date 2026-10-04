@@ -3,6 +3,11 @@
 *choose* on validation data and take one untouched test score, with pre-registered real-data runs
 and controls. Python standard library only.
 
+**Real data:** 6.7 years of Binance daily bars, 34 coins (2020-01 to 2026-08). Splits fixed in a
+committed config before any run: train 2020-2023, validation 2024, test 2025-01 to 2026-08.
+Signals use data through the previous day only (delay 1), costs are 10 bps per side, and every
+look at the test window is counted.
+
 **Real-data result (Binance daily, 34 coins, test 2025-01 to 2026-08): test rank IC 0.082, but it
 is mostly a low-beta tilt in a market where the coin basket fell 66%, and its returns are
 indistinguishable from zero before and after costs.** The GP, an equal-budget random search and a one-line range factor all score
