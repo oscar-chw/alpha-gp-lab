@@ -2,14 +2,15 @@
 
 [![ci](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/ci.yml) [![lint](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/lint.yml/badge.svg)](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/lint.yml)
 
+A genetic-programming search over formulaic alpha factors, evaluated delay-1 and
 after costs, with train, validation and test roles fixed in committed configs before any real-data
 run and an equal-budget random search as a control: the search may only *breed* on train data,
 *choose* on validation data and take one untouched test score. Python standard library only.
 
-
-  and selection on validation, never on the final test.
-- *Different here:* genetic programming instead of template enumeration; train, validation and
-  test roles fixed in committed configs before any real-data run; an equal-budget random search as
+Searching a large space of formulaic signals invites overfitting, so this project fixes the
+protocol first: pre-registered splits, delay-1 signals, costs, and an equal-budget random-search
+control. It runs on free Binance daily bars. Operator names follow the style of formulaic alphas in
+Kakushadze, "101 Formulaic Alphas" (2016); their semantics are defined in this repo.
 
 **Run it** (Python 3.11, nothing to install; under 5 minutes on the development machine):
 
@@ -29,7 +30,8 @@ Implemented with AI coding agents under Oscar's design and review.
 
 ## The problem
 
-factors (`rank(-ts_delta(close, 5))` and the like) for ones that predict next-period
+Alpha mining means searching a huge space of formulaic factors (`rank(-ts_delta(close, 5))`
+and the like, in the style of Kakushadze, "101 Formulaic Alphas", 2016) for ones that predict next-period
 cross-sectional returns. Search is cheap; honest evaluation is not. A search that is allowed
 to look at the data it is judged on will always find something, and an LLM asked for
 "good alphas" adds a second, unaudited source of ideas.
@@ -46,7 +48,7 @@ sign, log, winsorize`, three industry-relative operators (`group_rank / group_zs
 group_neutralize(x, industry)`), ten time-series operators (`ts_delta, ts_delay, ts_mean,
 ts_sum, ts_std, ts_rank, ts_min, ts_max, ts_decay_linear, ts_corr`) and `+ - * /` (protected
 division). Unknown fields, operators, windows or syntax are refused with a reason. The
-semantics are local definitions written down in `src/alpha_gp_lab/evaluate.py`; they do not
+semantics are local definitions written down in `src/alpha_gp_lab/evaluate.py`.
 
 **Timing and metrics.** The interval at date t opens at `close[t]` and closes at
 `close[t+1]`; its signal is the expression's row at `t - delay` (delay 1 in every run here).
@@ -148,10 +150,6 @@ duplicate and three invalid lines. It is used by the SYNTHETIC demo only.
   that file. The CSVs are not committed. The fetcher's URL building, checksum logic and kline
   conversion are unit-tested offline.
 
-in-memory fake transport that returns fixture responses, and a submit / poll / fetch client
-that parses the expression locally before anything reaches the transport. There is no
-endpoint URL anywhere in the package.
-
 **Persistence and replay** (`src/alpha_gp_lab/store.py`). Each run writes a fresh directory:
 exact config bytes, the panel, the LLM seed record, the code hashes, an append-only SQLite
 lineage (nodes, parent edges, per-split results, selections, LLM verdicts; triggers abort any
@@ -220,6 +218,7 @@ one-line range factor all score about 0.08. After removing beta, 65% of the IC r
 beta and size, IC 0.049 (60%), and it comes from down days, consistent with the known
 low-volatility effect (a 60-day low-volatility ranking scores 0.045 under the same
 neutralisation). Sources: `results/binance_*.json` (diagnostics post-hoc); survivorship-biased
+universe, test window reused, other data SYNTHETIC ([Limits](#limits)).
 
 **Survivorship bias: these 34 coins are USDT pairs still trading in 2026, chosen in 2026.** The
 rule, recorded in `fixtures/binance_universe.json`: the orchestrating agent picked, on 2026-10-03,
@@ -644,6 +643,7 @@ scripts/           check.sh, demo.sh, fetch_binance_daily.py, analyze_binance.py
 .github/workflows/ ci.yml: runs check.sh on Python 3.11 (passed on main at 9ecf2ce, 2026-10-04;
                    real-data steps skip there)
 fixtures/          configs (SYNTHETIC and Binance), binance_universe.json, LLM replay
+                   (HAND-WRITTEN FIXTURE), sample CSVs
 results/           printed summaries of the real-data runs, the follow-up analysis, the post-hoc
                    diagnostics, the failed live-LLM attempt
 docs/              architecture.md, real-data-runs.md (ledger, timeline, full precision),
@@ -710,10 +710,6 @@ Diagrams of the data flow, the split roles and the lineage schema are in
   of published anomalies would itself be information from outside the sample period.
 - **Synthetic effects are planted by construction**, so finding them shows that the machinery
   works, not that there is an edge anywhere.
-  handling, checkpoint/resume), generates candidates from templates (fields × operators ×
-  windows), batch-simulates them and refines the best with group/industry neutralisation and
-  decay settings. This repo does not reproduce that search; what links the two is discipline and
-  expression style, not the algorithm.
 - **Scale.** Pure Python, single process: the main real-data run takes about 90 s for 640
   candidate occurrences on 34 coins. Universes of thousands of instruments would need
   vectorised code.
@@ -754,9 +750,6 @@ in single-name tails (gross t 0.96 before any fee).
 
 ## Attribution
 
-- The genetic-algorithm / bandit idea for searching alpha expressions and simulation settings
-  (Apache-2.0, commit `dead3cc70a7b3c6a8bfd4849ef141690c2eaec19`). This repo implements the
-  genetic-programming part; no code from that project is reused.
 - The multi-agent research pattern (one role proposes hypotheses, another implements and
   evaluates them, held-out results decide) comes from
   [microsoft/RD-Agent](https://github.com/microsoft/RD-Agent) (MIT), via Oscar's fork
@@ -764,8 +757,8 @@ in single-name tails (gross t 0.96 before any fee).
   develops, and the validation and test splits decide; no code is reused.
 - This repo grows out of Oscar's earlier offline search workflow, a toy-scale single-generation
   version with the same no-`eval` parsing, split roles and SQLite replay ideas, which is
-  rewritten here. The lower-bound-IC / upper-bound-turnover selection rule, the five
-  industry-relative templates and the simulation-settings field set are clean
-  blanket licence; none of that code is copied.
+  rewritten here.
+- Operator names follow the style of formulaic alphas in Kakushadze, "101 Formulaic Alphas"
+  (2016); no code or data from that paper is used.
 
 Licence: MIT (see [LICENSE](LICENSE)).

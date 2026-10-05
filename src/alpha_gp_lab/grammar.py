@@ -1,7 +1,7 @@
 """Factor-expression grammar: parsed with Python's ``ast`` into frozen trees, never ``eval``.
 
-The operator names follow the style of published formulaic-alpha expression languages, but every
-semantic here is a local definition (see ``evaluate.py``); nothing claims platform equivalence.
+The operator names follow the style of formulaic alphas in Kakushadze, "101 Formulaic Alphas"
+(2016), but every semantic here is a local definition (see ``evaluate.py``).
 """
 import ast
 from dataclasses import dataclass, replace
@@ -162,11 +162,7 @@ def canonical(node):
 
 
 def industry_variants(node):
-    """Five industry-relative wrappers of a signal.
-
-    Lineage: the template list is a clean re-implementation of the "step 2" improvement
-    templates in Oscar's earlier template code; no code from that archive is reused.
-    """
+    """Five industry-relative wrappers of a signal."""
     return [
         Node('group_rank', (node,)),
         Node('group_zscore', (node,)),

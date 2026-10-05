@@ -9,8 +9,8 @@
 All randomness comes from one ``random.Random`` seeded from (config seed, fold), so a config
 and a panel determine the report exactly.
 
-The GA idea (population of expressions, crossover and mutation, settings search) is adapted
-from public formulaic-alpha miners; no code from them is reused.
+The search itself is standard tree-based genetic programming (a population of expressions,
+subtree crossover and mutation).
 """
 import random
 
