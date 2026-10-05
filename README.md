@@ -756,7 +756,7 @@ Implemented with AI coding agents under Oscar's design and review.
 - The multi-agent research pattern (one role proposes hypotheses, another implements and
   evaluates them, held-out results decide) comes from
   [microsoft/RD-Agent](https://github.com/microsoft/RD-Agent) (MIT), via Oscar's fork
-  [hihihhi/RD-Agent](https://github.com/hihihhi/RD-Agent). Here the LLM proposes, the GP
+  [Oscar-Codespace/RD-Agent](https://github.com/Oscar-Codespace/RD-Agent). Here the LLM proposes, the GP
   develops, and the validation and test splits decide; no code is reused.
 - This repo grows out of Oscar's earlier offline search workflow, a toy-scale single-generation
   version with the same no-`eval` parsing, split roles and SQLite replay ideas, which is
