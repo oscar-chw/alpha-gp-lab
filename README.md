@@ -1,13 +1,11 @@
-# alpha-gp-lab
+# alpha-gp-lab: genetic-programming alpha search with pre-registered splits
 
 [![ci](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/ci.yml) [![lint](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/lint.yml/badge.svg)](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/lint.yml)
 
-data, *choose* on validation data and take one untouched test score, with pre-registered real-data
-runs and controls. Python standard library only.
+after costs, with train, validation and test roles fixed in committed configs before any real-data
+run and an equal-budget random search as a control: the search may only *breed* on train data,
+*choose* on validation data and take one untouched test score. Python standard library only.
 
-pipeline generates candidates from templates (fields × operators × windows), batch-simulates them
-and refines the best with group/industry neutralisation and decay settings. It does not use
-discipline and expression style, not the algorithm.
 
   and selection on validation, never on the final test.
 - *Different here:* genetic programming instead of template enumeration; train, validation and
@@ -21,11 +19,13 @@ python3.11 -m alpha_gp_lab demo --out runs/demo    # SYNTHETIC regime-change dem
 bash scripts/check.sh                              # tests, demo, replays; real-data steps if data/ exists
 ```
 
-**Real-data result, in one line:** on Binance daily bars (34 surviving coins, test 2025-01 to
-2026-08) the pick's test rank IC is about 0.08, but its returns are not significant before or
-after costs (gross t 0.96, net t 0.22), and an equal-budget random search matched it (IC 0.080 vs 0.082): a
-neutral result, with no evidence of a tradable signal. Diagnostics and sources are in
+**Real-data result:** on Binance daily bars (34 surviving coins, test 2025-01 to 2026-08) the pick
+reaches a test rank IC of about 0.08, matched by the equal-budget random search (0.082 vs 0.080);
+its returns are not significant before or after costs (gross t 0.96, net t 0.22), so this is a
+neutral result, not a tradable signal. Diagnostics and sources are in
 [Results](#results-real-numbers-with-their-source-synthetic-clearly-labelled).
+
+Implemented with AI coding agents under Oscar's design and review.
 
 ## The problem
 
@@ -710,6 +710,10 @@ Diagrams of the data flow, the split roles and the lineage schema are in
   of published anomalies would itself be information from outside the sample period.
 - **Synthetic effects are planted by construction**, so finding them shows that the machinery
   works, not that there is an edge anywhere.
+  handling, checkpoint/resume), generates candidates from templates (fields × operators ×
+  windows), batch-simulates them and refines the best with group/industry neutralisation and
+  decay settings. This repo does not reproduce that search; what links the two is discipline and
+  expression style, not the algorithm.
 - **Scale.** Pure Python, single process: the main real-data run takes about 90 s for 640
   candidate occurrences on 34 coins. Universes of thousands of instruments would need
   vectorised code.
@@ -749,8 +753,6 @@ in single-name tails (gross t 0.96 before any fee).
    -0.006158512090458223. Beating them is a low bar, not a result.
 
 ## Attribution
-
-Implemented with AI coding agents under Oscar's design and review.
 
 - The genetic-algorithm / bandit idea for searching alpha expressions and simulation settings
   (Apache-2.0, commit `dead3cc70a7b3c6a8bfd4849ef141690c2eaec19`). This repo implements the
