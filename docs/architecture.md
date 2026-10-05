@@ -2,38 +2,7 @@
 
 ## Data flow and split roles
 
-```mermaid
-flowchart LR
-    subgraph inputs[Inputs]
-        CFG[config JSON<br/>seed, splits or walk_forward,<br/>GP budget, penalties]
-        SYN[data.synthetic_panel<br/>SYNTHETIC regimes]
-        CSV[data.load_csv_dir<br/>daily OHLCV CSVs]
-        BIN[scripts/fetch_binance_daily.py<br/>pinned by fixtures/binance_universe.json]
-        LLM[llm_seed.propose<br/>replay file by default<br/>--live: OpenRouter,<br/>pinned open-weight model]
-    end
-    BIN -. writes .-> CSV
-    LLM -->|every line parsed;<br/>invalid lines logged + rejected| SEEDS[accepted seed expressions]
-    SYN --> PANEL[Panel]
-    CSV --> PANEL
-    PANEL -->|head through train end| TRAIN[Evaluator: train]
-    PANEL -->|head through validation end| VAL[Evaluator: validation]
-    PANEL -->|head through test end| TEST[Evaluator: test]
-    SEEDS --> GP
-    CFG --> GP
-    subgraph GP[gp.search]
-        INIT[generation 0:<br/>seeds + ramped half-and-half] --> LOOP[tournament, elitism,<br/>subtree crossover, 5 mutations,<br/>depth/size limits,<br/>duplicate + equivalence filter]
-        LOOP --> HOF[hall of fame<br/>best train score per fingerprint]
-    end
-    TRAIN -->|fitness = rank IC - turnover - complexity| GP
-    HOF --> PICK[qualify, rank by validation fitness,<br/>correlation filter, shortlist]
-    RS[gp.random_search<br/>equal budget, same filter,<br/>no breeding: the control] --> PICK
-    VAL --> PICK
-    PICK -->|final pick only| TEST
-    TEST --> REPORT[report]
-    GP --> STORE[(store: append-only SQLite<br/>+ hash manifest)]
-    REPORT --> STORE
-    STORE -->|verify: hashes, read-back,<br/>full recomputation| REPORT
-```
+The data flow is drawn in [DIAGRAMS.md](DIAGRAMS.md#1-system-overview-the-alpha-factory-map) and the split roles in [DIAGRAMS.md](DIAGRAMS.md#2-split-roles-on-the-real-data).
 
 Each `Evaluator` is constructed on `panel.head(end + 1)` for the span it scores, so a later
 split's bars do not exist inside an earlier split's evaluator. The tests perturb every bar

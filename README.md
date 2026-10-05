@@ -12,6 +12,86 @@ protocol first: pre-registered splits, delay-1 signals, costs, and an equal-budg
 control. It runs on free Binance daily bars. Operator names follow the style of formulaic alphas in
 Kakushadze, "101 Formulaic Alphas" (2016); their semantics are defined in this repo.
 
+The alpha factory map: Binance daily bars and a pre-registered config go through one search that
+breeds on train only, chooses on validation only and scores one pick once on test, beside
+controls scored with the same evaluator, delay and costs
+([all diagrams](docs/DIAGRAMS.md); purple marks the path the repo is about).
+
+```mermaid
+flowchart LR
+    subgraph DATA["Data, never committed"]
+        FETCH["scripts/fetch_binance_daily.py"]
+        CSV[("data/binance-daily/<br/>34 daily OHLCV CSVs")]
+        UNI[("fixtures/binance_universe.json<br/>SHA-256 of each CSV")]
+    end
+    subgraph PREREG["Pre-registered in 91823e6"]
+        CFG[("fixtures/binance_daily_config.json<br/>splits, GP budget, rule, costs")]
+    end
+    subgraph SEARCH["One fold: gp.search"]
+        PANEL["data.load_csv_dir<br/>Panel"]
+        FOLDS["config.folds<br/>ISO dates to index spans"]
+        PARSE["grammar.parse<br/>ast trees, never eval"]
+        TRAIN["GP breeds on train<br/>Evaluator on panel.head(train end + 1)"]
+        HOF["hall of fame<br/>16 best distinct signals"]
+        CHOOSE{"gp._choose on validation<br/>IC ≥ 0.01, turnover ≤ 1.0,<br/>correlation ≤ 0.7"}
+        NONE["NO_QUALIFYING_CANDIDATE<br/>no test score"]
+        TEST["test Evaluator<br/>final pick only, once"]
+        COST["Evaluator.metrics<br/>delay 1, net = gross<br/>minus 10 bps x turnover"]
+    end
+    subgraph CTRL["Controls"]
+        BASE["config baselines<br/>momentum_20d, reversal_1d"]
+        RS["gp.random_search<br/>equal budget, no breeding"]
+        ONE["range_10d<br/>one-line control"]
+        DIAG["scripts/diagnose_binance.py<br/>frozen ranking, beta and size<br/>neutralised IC, POST-HOC"]
+    end
+    LLM["llm_seed.propose"]
+    RES[("results/binance_*.json")]
+    RUNS[("runs/binance-main/<br/>append-only SQLite,<br/>hash manifest")]
+
+    FETCH -->|"SHA-256 vs .CHECKSUM"| CSV
+    UNI -.->|"verify-data: hashes,<br/>rows, dates"| CSV
+    CSV ==>|"daily bars, dates aligned"| PANEL
+    CFG ==>|"train, validation,<br/>test date spans"| FOLDS
+    PANEL ==>|"bars up to train end"| TRAIN
+    FOLDS ==>|"ordered, disjoint spans"| TRAIN
+    LLM -.->|"seeds only if use_seeds<br/>(false in the main run)"| PARSE
+    PARSE -->|"random trees and<br/>every offspring"| TRAIN
+    TRAIN ==>|"fitness: IC minus penalties"| HOF
+    TRAIN -->|"every node, each generation"| RUNS
+    HOF ==>|"16 candidates"| CHOOSE
+    CHOOSE ==>|"top of the shortlist"| TEST
+    CHOOSE -.->|"none qualify"| NONE
+    TEST ==>|"daily weights and labels"| COST
+    COST ==>|"printed summary"| RES
+    BASE -->|"same three evaluators"| COST
+    RS -->|"640 trees, same filter<br/>and validation rule"| COST
+    ONE -->|"scored beside the pick"| COST
+    RES -->|"the pick's committed<br/>gross and net"| DIAG
+    DIAG -->|"refuses unless it<br/>reproduces them"| RES
+
+    classDef data fill:#dbeafe,stroke:#1d4ed8,color:#0b1220
+    classDef step fill:#f1f5f9,stroke:#475569,color:#0b1220
+    classDef gate fill:#fef3c7,stroke:#b45309,color:#0b1220
+    classDef out  fill:#dcfce7,stroke:#15803d,color:#0b1220
+    classDef ext  fill:#f8fafc,stroke:#94a3b8,color:#0b1220,stroke-dasharray:4 3
+    classDef key  fill:#ede9fe,stroke:#6d28d9,color:#0b1220,stroke-width:2px
+    class CSV,UNI,CFG data
+    class FETCH,PANEL,FOLDS,PARSE,BASE,RS,ONE,DIAG step
+    class CHOOSE,NONE gate
+    class RES,RUNS out
+    class LLM ext
+    class TRAIN,HOF,TEST,COST key
+```
+
+Where in the code: `scripts/fetch_binance_daily.py`, `src/alpha_gp_lab/{data,config,grammar,gp,evaluate,llm_seed,store,cli}.py`,
+`fixtures/binance_daily_config.json`, `fixtures/binance_universe.json`, `scripts/analyze_binance.py`
+(random search, `range_10d`), `scripts/diagnose_binance.py`.
+
+
+  and selection on validation, never on the final test.
+- *Different here:* genetic programming instead of template enumeration; train, validation and
+  test roles fixed in committed configs before any real-data run; an equal-budget random search as
+
 **Run it** (Python 3.11, nothing to install; under 5 minutes on the development machine):
 
 ```sh
@@ -68,6 +148,63 @@ abstains into cash.
   count as one candidate);
 - fitness = mean rank IC - `turnover_penalty` x turnover - `complexity_penalty` x tree size.
 
+One generation loop with the main run's budget: every tree passes the same admission filter
+before it is scored on train, and only the hall of fame leaves for validation:
+
+```mermaid
+flowchart TD
+    SEEDS["accepted LLM seeds<br/>(none when use_seeds is false)"]
+    INIT["gp.random_tree<br/>ramped half-and-half, depth 2 to 4"]
+    ADMIT{"gp._admitter<br/>depth ≤ 6 and ≤ 15 nodes,<br/>new canonical form,<br/>IC defined on train,<br/>new train fingerprint"}
+    REJ["dropped and counted<br/>rejected_limits, duplicate,<br/>degenerate, equivalent"]
+    POP["population of 64<br/>fitness = IC minus 0.02 x turnover<br/>minus 0.001 x size"]
+    DB[("state.sqlite<br/>nodes, edges, train results")]
+    MORE{"fewer than<br/>10 generations?"}
+    ELITE["elitism<br/>best 4 copied"]
+    TOUR["tournament of 4"]
+    XO["gp.crossover<br/>subtree swap"]
+    MUT["gp.mutate, one of 5<br/>subtree, point, window,<br/>hoist, industry"]
+    REPARSE{"grammar.parse of the child<br/>max depth 6"}
+    HOF["hall of fame<br/>best train score per<br/>fingerprint, top 16"]
+    VAL["gp._choose<br/>validation"]
+
+    SEEDS -->|"generation 0, first"| ADMIT
+    INIT -->|"until 64 or<br/>attempts run out"| ADMIT
+    ADMIT -->|"fails a check"| REJ
+    ADMIT ==>|"admitted with train score"| POP
+    POP -->|"committed per generation"| DB
+    POP ==>|"generation complete"| MORE
+    MORE -->|"yes"| ELITE
+    MORE -->|"yes"| TOUR
+    ELITE -->|"same tree, parent edge"| ADMIT
+    TOUR -->|"p 0.6: two parents"| XO
+    TOUR -->|"p 0.4: one parent"| MUT
+    XO -->|"child tree"| REPARSE
+    MUT -->|"child tree"| REPARSE
+    REPARSE -->|"too deep or too long"| REJ
+    REPARSE -->|"parses"| ADMIT
+    MORE ==>|"no: 10 done"| HOF
+    HOF ==>|"16 candidates"| VAL
+
+    classDef data fill:#dbeafe,stroke:#1d4ed8,color:#0b1220
+    classDef step fill:#f1f5f9,stroke:#475569,color:#0b1220
+    classDef gate fill:#fef3c7,stroke:#b45309,color:#0b1220
+    classDef out  fill:#dcfce7,stroke:#15803d,color:#0b1220
+    classDef ext  fill:#f8fafc,stroke:#94a3b8,color:#0b1220,stroke-dasharray:4 3
+    classDef key  fill:#ede9fe,stroke:#6d28d9,color:#0b1220,stroke-width:2px
+    class SEEDS ext
+    class INIT,ELITE,TOUR,XO,MUT step
+    class ADMIT,REPARSE,MORE,REJ gate
+    class DB data
+    class POP,HOF key
+    class VAL out
+```
+
+Where in the code: `src/alpha_gp_lab/gp.py` (`search`, `_admitter`, `random_tree`, `crossover`,
+`mutate`), `src/alpha_gp_lab/evaluate.py` (`score`, `Evaluator.fingerprint`),
+`src/alpha_gp_lab/grammar.py` (`parse`, `canonical`), `src/alpha_gp_lab/store.py` (`on_generation`);
+budget from `fixtures/binance_daily_config.json` (`gp`, `fitness`).
+
 **Splits.** A config gives index spans or ISO-date spans (`["2024-01-01", "2024-12-31"]`
 resolves to the first and last panel dates inside it), as one fold, an explicit list of folds,
 or a rolling `walk_forward` in days.
@@ -87,6 +224,40 @@ or a rolling `walk_forward` in days.
 
 Each evaluator is built on the panel truncated at its split's last label, so later bars do not
 exist inside it.
+
+The split roles on the real data, from the committed configs (walk-forward folds 2 and 3 fall
+inside the main test window):
+
+```mermaid
+gantt
+    title Split roles, fixed in committed configs before any real-data run
+    dateFormat YYYY-MM-DD
+    axisFormat %Y
+    section Main run
+    train, GP breeds here           :done, 2020-01-01, 2023-12-31
+    validation, selection only      :active, 2024-01-01, 2024-12-31
+    test, the pick scored once      :crit, 2025-01-01, 2026-08-31
+    section Walk-forward fold 0
+    train                           :done, 2020-01-01, 2021-12-31
+    validation                      :active, 2022-01-01, 2022-12-31
+    test                            :crit, 2023-01-01, 2023-12-31
+    section Walk-forward fold 1
+    train                           :done, 2021-01-01, 2022-12-31
+    validation                      :active, 2023-01-01, 2023-12-31
+    test                            :crit, 2024-01-01, 2024-12-31
+    section Walk-forward fold 2
+    train                           :done, 2022-01-01, 2023-12-31
+    validation                      :active, 2024-01-01, 2024-12-31
+    test                            :crit, 2025-01-01, 2025-12-31
+    section Walk-forward fold 3
+    train                           :done, 2023-01-01, 2024-12-31
+    validation                      :active, 2025-01-01, 2025-12-31
+    test                            :crit, 2026-01-01, 2026-08-31
+```
+
+Where in the code: `fixtures/binance_daily_config.json` and `fixtures/binance_walkforward_config.json`
+(`splits`), `config._split` (refuses spans that are not ordered and disjoint), `config.folds`,
+`gp.search` (`panel.head(te + 1)`, `panel.head(ve + 1)`, `panel.head(xe + 1)`).
 
 **Walk-forward.** A list of folds, or `walk_forward` in the config, rolls train / validation / test
 windows forward and reruns the whole search per fold, with no shared state; the report gives
@@ -117,6 +288,7 @@ brief and the grammar (never data) asks for N expressions. Responses are cached 
 replay file keyed by the SHA-256 of the exact prompt. Every proposed line is parsed; invalid
 lines are logged, rejected and counted (a line starting `- ` is rejected too, because a list
 bullet and a minus sign cannot be told apart). The demo and the tests read only the replay file.
+([Diagram: replay or one live request, and every refusal](docs/DIAGRAMS.md#4-the-llm-seed-path-replay-or-one-live-request).)
 `seeds --live` makes one request to a free hosted open-weight model on OpenRouter, pinned as
 `qwen/qwen3.8-27b:free` (weights: Hugging Face `Qwen/Qwen3.8-27B` at revision
 `1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0`, Apache-2.0; created on Hugging Face 2026-08-05,
@@ -201,7 +373,8 @@ precision, and [docs/real-data-runs.md](docs/real-data-runs.md) repeats the main
 precision with the run ledger and commit timeline. "net" is the mean hypothetical return per daily
 interval of a unit-gross, dollar-neutral portfolio after the fee on turnover; "gross" is the same
 before the fee; "sum" adds daily values without compounding; ICIR is the mean daily IC over its
-standard deviation.
+standard deviation. How each result file is produced, checked and quoted here is drawn in
+[docs/DIAGRAMS.md](docs/DIAGRAMS.md#5-how-a-result-reaches-the-readme).
 
 ### Real data (Binance daily, 34 coins, 2020–2026)
 
@@ -651,8 +824,8 @@ docs/              architecture.md, real-data-runs.md (ledger, timeline, full pr
 tests/             unittest suite and hand_cases.py (Fractions, no evaluator import)
 ```
 
-Diagrams of the data flow, the split roles and the lineage schema are in
-[docs/architecture.md](docs/architecture.md).
+All diagrams, numbered, are in [docs/DIAGRAMS.md](docs/DIAGRAMS.md); the module table and the
+lineage schema are in [docs/architecture.md](docs/architecture.md).
 
 ## Limits
 
