@@ -1,5 +1,7 @@
 # alpha-gp-lab
 
+[![ci](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/ci.yml) [![lint](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/lint.yml/badge.svg)](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/lint.yml)
+
 data, *choose* on validation data and take one untouched test score, with pre-registered real-data
 runs and controls. Python standard library only.
 
