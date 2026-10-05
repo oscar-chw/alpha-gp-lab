@@ -1,4 +1,4 @@
-"""Figures for the README from results/binance_analysis.json (real Binance data, test period only).
+"""Figures for docs/results.md from results/binance_analysis.json (real Binance data, test period only).
 
     $PORTFOLIO_VENV/bin/python scripts/plot_binance.py      # any Python with matplotlib
 

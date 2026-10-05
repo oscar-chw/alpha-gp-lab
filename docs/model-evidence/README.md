@@ -1,6 +1,6 @@
 # Model evidence for the live seed proposer
 
-Public API responses behind the model facts in the README's LLM seeds section, committed
+Public API responses behind the model facts in [llm-seeds.md](../llm-seeds.md), committed
 unchanged as fetched at **2026-10-04T20:18:59Z**. No LLM was called to get them. The same
 three files, with the same SHA-256, are committed in the sibling repository asof-research
 (`results/forward-2026-09/model-evidence/`).

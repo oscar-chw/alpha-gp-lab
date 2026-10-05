@@ -30,7 +30,7 @@ _BULLET = re.compile(r'^(?:\*\s+|\d+[.)]\s*)')   # '* x', '1. x', '2) x'
 # The live proposer. Oscar's decision (2026-10-05): no Anthropic or OpenAI model, in any form.
 # Free hosted open weights: Hugging Face Qwen/Qwen3.8-27B at revision
 # 1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0, Apache-2.0 (HF createdAt 2026-08-05; OpenRouter
-# listed it 2026-08-14); the README names the sources. Free tier: 20 requests/minute, 50/day
+# listed it 2026-08-14); docs/llm-seeds.md names the sources. Free tier: 20 requests/minute, 50/day
 # without purchased credits, so a refusal is never retried.
 OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 MODEL = 'qwen/qwen3.8-27b:free'

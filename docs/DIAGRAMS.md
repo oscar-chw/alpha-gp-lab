@@ -29,7 +29,7 @@ flowchart TB
         CSV[("data/binance-daily/<br/>34 daily OHLCV CSVs<br/>fetched, checksummed")]
         UNI[("binance_universe.json<br/>SHA-256 of each CSV")]
     end
-    CFG[("binance_daily_config.json<br/>pre-registered, 91823e6")]
+    CFG[("binance_daily_config.json<br/>committed before<br/>any real-data run")]
     LLM["llm_seed.propose"]
     subgraph SEARCH["One fold: gp.search"]
         PANEL["data.load_csv_dir<br/>Panel"]
@@ -235,7 +235,7 @@ Where in the code: `src/alpha_gp_lab/llm_seed.py` (`propose`, `build_prompt`, `p
 
 ## 5. How a result reaches the README
 
-Every real-data number in the README is quoted from a committed `results/*.json` file, written by
+Every real-data number in the README and docs/results.md is quoted from a committed `results/*.json` file, written by
 a command over a committed config. The follow-up and diagnostic scripts refuse to run unless they
 reproduce the committed main result first, and `check.sh` re-runs the main config against it
 whenever the data is present.
@@ -257,7 +257,7 @@ flowchart TB
     DIJ[("binance_diagnostics.json")]
     PLOT["plot_binance.py<br/>needs matplotlib"]
     FIG[("docs/figures/<br/>two PNGs")]
-    README["README.md<br/>3 to 4 sig. figures"]
+    README["README.md,<br/>docs/results.md<br/>rounded"]
     LEDGER["docs/real-data-runs.md<br/>full precision"]
 
     MAINC ==>|"--config"| RUN

@@ -35,6 +35,6 @@ got, want = (json.load(open(p)) for p in sys.argv[1:])
 sys.exit(0 if same(got, want) else 'real-data main run does not reproduce results/binance_daily_main.json')
 PYEOF
 else
-  echo "check.sh: data/binance-daily not present; real-data steps skipped (see README, How to run)"
+  echo "check.sh: data/binance-daily not present; real-data steps skipped (see docs/reproduce.md)"
 fi
 echo "check.sh: all passed"

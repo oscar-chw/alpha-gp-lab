@@ -1,8 +1,9 @@
-# Real-data runs: ledger, timeline and full-precision tables
+# Real-data runs: ledger and full-precision tables
 
-The README rounds to 3-4 significant figures. This page keeps the audit detail: every real-data
-command, when each plan was committed relative to the results it could have seen, and the main
-and walk-forward tables at the full precision the JSON files hold.
+The README and [results.md](results.md) round to 3-4 significant figures or fewer. This page keeps
+the audit detail: every real-data command with its code version and exit code, and the main and
+walk-forward tables at the full precision the JSON files hold. When each plan was committed
+relative to the results it could have seen is in [evidence.md](evidence.md#timeline-what-each-plan-could-have-seen).
 
 ## Every real-data run
 
@@ -10,7 +11,7 @@ and walk-forward tables at the full precision the JSON files hold.
 |---:|---|---|---:|---|
 | 1 | `verify-data` (several times, and inside `check.sh`) | from `91823e6` on | 0 | 34 files match the pinned SHA-256s, rows and dates |
 | 2 | `seeds --live` (main config) | `91823e6` | 1 | CLI not signed in; no LLM output |
-| 3 | `run` main config | `ad4afb5` | 0 | the numbers above; printed before `net_tstat` existed; output overwritten by run 4 |
+| 3 | `run` main config | `ad4afb5` | 0 | the main-run numbers; printed before `net_tstat` existed; output overwritten by run 4 |
 | 4 | `run` main config | `56129b8` | 0 | identical numbers plus `net_tstat`; overwritten by run 6 |
 | 5 | `run` walk-forward config | `56129b8` | 0 | identical numbers, without `mean_gross` and `valid_ic_intervals`; overwritten by run 7 |
 | 6 | `run` main config | `8c4abfa` | 0 | committed as `results/binance_daily_main.json` |
@@ -25,25 +26,6 @@ does not read the added fields. Each `run` also replays itself once inside `veri
 `scripts/check.sh` re-runs the main config and compares it with the committed file. A timing run
 on SYNTHETIC data shaped like the real panel (34 assets, 2,435 days) was made before
 pre-registration; it used no real data.
-
-## Timeline: what each plan could have seen
-
-`git log --date=iso` gives these commit times (local time, 2026-10-03):
-
-| Commit | Time | What |
-|---|---|---|
-| `91823e6` | 17:37:30 | main and walk-forward configs pre-registered, before any real-data run |
-| `fea7780` | 17:56:41 | main-run and walk-forward test results committed |
-| `881147e` | 18:15:39 | follow-up plan (random search, seeds, bootstrap, range control) committed, 19 minutes **after** the main test result |
-| `5f6480e` | 18:21:48 | follow-up results committed |
-| `f93540f` | 18:53:44 | post-hoc diagnostics script committed, after a reviewer had probed the test window |
-| `bf8af3c` | 18:54:13 | post-hoc diagnostics results committed |
-| `14b5834` | 19:16:29 | two more post-hoc diagnostics (up/down t, neutralised reference rankings) committed before running, after a second review |
-
-So the follow-up plan fixed its seeds, budget, decision rules and bootstrap before it ran, but it
-was written knowing the main pick and its test score. In particular the range control was chosen
-because the pick looked like a range measure. That choice can only hurt the GP's case, but the
-follow-up is not blind to the test result, and the diagnostics are plainly post-hoc.
 
 ## Main run and follow-up rows, full precision
 
