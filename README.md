@@ -18,56 +18,53 @@ controls scored with the same evaluator, delay and costs
 ([all diagrams](docs/DIAGRAMS.md); purple marks the path the repo is about).
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph DATA["Data, never committed"]
-        FETCH["scripts/fetch_binance_daily.py"]
-        CSV[("data/binance-daily/<br/>34 daily OHLCV CSVs")]
-        UNI[("fixtures/binance_universe.json<br/>SHA-256 of each CSV")]
+        CSV[("data/binance-daily/<br/>34 daily OHLCV CSVs<br/>fetched, checksummed")]
+        UNI[("binance_universe.json<br/>SHA-256 of each CSV")]
     end
-    subgraph PREREG["Pre-registered in 91823e6"]
-        CFG[("fixtures/binance_daily_config.json<br/>splits, GP budget, rule, costs")]
-    end
+    CFG[("binance_daily_config.json<br/>pre-registered, 91823e6")]
+    LLM["llm_seed.propose"]
     subgraph SEARCH["One fold: gp.search"]
         PANEL["data.load_csv_dir<br/>Panel"]
-        FOLDS["config.folds<br/>ISO dates to index spans"]
+        FOLDS["config.folds<br/>dates to index spans"]
         PARSE["grammar.parse<br/>ast trees, never eval"]
-        TRAIN["GP breeds on train<br/>Evaluator on panel.head(train end + 1)"]
-        HOF["hall of fame<br/>16 best distinct signals"]
-        CHOOSE{"gp._choose on validation<br/>IC ≥ 0.01, turnover ≤ 1.0,<br/>correlation ≤ 0.7"}
-        NONE["NO_QUALIFYING_CANDIDATE<br/>no test score"]
-        TEST["test Evaluator<br/>final pick only, once"]
-        COST["Evaluator.metrics<br/>delay 1, net = gross<br/>minus 10 bps x turnover"]
+        TRAIN["GP breeds on train<br/>panel cut at train end"]
+        HOF["hall of fame<br/>16 best distinct"]
+        CHOOSE{"gp._choose<br/>on validation"}
+        NONE["NO_QUALIFYING_<br/>CANDIDATE"]
+        TEST["test Evaluator<br/>final pick, once"]
     end
     subgraph CTRL["Controls"]
-        BASE["config baselines<br/>momentum_20d, reversal_1d"]
-        RS["gp.random_search<br/>equal budget, no breeding"]
+        BASE["baselines<br/>momentum_20d,<br/>reversal_1d"]
+        RS["gp.random_search<br/>equal budget"]
         ONE["range_10d<br/>one-line control"]
-        DIAG["scripts/diagnose_binance.py<br/>frozen ranking, beta and size<br/>neutralised IC, POST-HOC"]
     end
-    LLM["llm_seed.propose"]
+    COST["Evaluator.metrics<br/>delay 1, net = gross<br/>minus 10 bps x turnover"]
     RES[("results/binance_*.json")]
-    RUNS[("runs/binance-main/<br/>append-only SQLite,<br/>hash manifest")]
+    RUNS[("runs/binance-main/<br/>append-only SQLite")]
+    DIAG["diagnose_binance.py<br/>POST-HOC"]
 
-    FETCH -->|"SHA-256 vs .CHECKSUM"| CSV
-    UNI -.->|"verify-data: hashes,<br/>rows, dates"| CSV
-    CSV ==>|"daily bars, dates aligned"| PANEL
-    CFG ==>|"train, validation,<br/>test date spans"| FOLDS
-    PANEL ==>|"bars up to train end"| TRAIN
-    FOLDS ==>|"ordered, disjoint spans"| TRAIN
-    LLM -.->|"seeds only if use_seeds<br/>(false in the main run)"| PARSE
-    PARSE -->|"random trees and<br/>every offspring"| TRAIN
-    TRAIN ==>|"fitness: IC minus penalties"| HOF
-    TRAIN -->|"every node, each generation"| RUNS
+    UNI -.->|"verify-data"| CSV
+    CSV ==>|"daily bars"| PANEL
+    CFG ==>|"split dates"| FOLDS
+    PANEL ==>|"bars to train end"| TRAIN
+    FOLDS ==>|"disjoint spans"| TRAIN
+    LLM -.->|"seeds if use_seeds<br/>(off in main run)"| PARSE
+    PARSE -->|"trees,<br/>offspring"| TRAIN
+    TRAIN -->|"every node"| RUNS
+    TRAIN ==>|"fitness"| HOF
     HOF ==>|"16 candidates"| CHOOSE
-    CHOOSE ==>|"top of the shortlist"| TEST
+    CHOOSE ==>|"IC ≥ 0.01, turnover ≤ 1,<br/>correlation ≤ 0.7"| TEST
     CHOOSE -.->|"none qualify"| NONE
-    TEST ==>|"daily weights and labels"| COST
-    COST ==>|"printed summary"| RES
-    BASE -->|"same three evaluators"| COST
-    RS -->|"640 trees, same filter<br/>and validation rule"| COST
-    ONE -->|"scored beside the pick"| COST
-    RES -->|"the pick's committed<br/>gross and net"| DIAG
-    DIAG -->|"refuses unless it<br/>reproduces them"| RES
+    TEST ==>|"weights, labels"| COST
+    BASE -->|"same evaluators"| COST
+    RS -->|"640 trees, same<br/>filter and rule"| COST
+    ONE -->|"beside the pick"| COST
+    COST ==>|"summary"| RES
+    TEST ~~~ CTRL
+    RES -->|"pick's gross, net"| DIAG
+    DIAG -->|"refuses unless<br/>reproduced"| RES
 
     classDef data fill:#dbeafe,stroke:#1d4ed8,color:#0b1220
     classDef step fill:#f1f5f9,stroke:#475569,color:#0b1220
@@ -76,7 +73,7 @@ flowchart LR
     classDef ext  fill:#f8fafc,stroke:#94a3b8,color:#0b1220,stroke-dasharray:4 3
     classDef key  fill:#ede9fe,stroke:#6d28d9,color:#0b1220,stroke-width:2px
     class CSV,UNI,CFG data
-    class FETCH,PANEL,FOLDS,PARSE,BASE,RS,ONE,DIAG step
+    class PANEL,FOLDS,PARSE,BASE,RS,ONE,DIAG step
     class CHOOSE,NONE gate
     class RES,RUNS out
     class LLM ext

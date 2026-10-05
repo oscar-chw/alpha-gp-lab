@@ -24,56 +24,53 @@ controls are scored with the same evaluator, timing and costs, and everything la
 `results/*.json`.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph DATA["Data, never committed"]
-        FETCH["scripts/fetch_binance_daily.py"]
-        CSV[("data/binance-daily/<br/>34 daily OHLCV CSVs")]
-        UNI[("fixtures/binance_universe.json<br/>SHA-256 of each CSV")]
+        CSV[("data/binance-daily/<br/>34 daily OHLCV CSVs<br/>fetched, checksummed")]
+        UNI[("binance_universe.json<br/>SHA-256 of each CSV")]
     end
-    subgraph PREREG["Pre-registered in 91823e6"]
-        CFG[("fixtures/binance_daily_config.json<br/>splits, GP budget, rule, costs")]
-    end
+    CFG[("binance_daily_config.json<br/>pre-registered, 91823e6")]
+    LLM["llm_seed.propose"]
     subgraph SEARCH["One fold: gp.search"]
         PANEL["data.load_csv_dir<br/>Panel"]
-        FOLDS["config.folds<br/>ISO dates to index spans"]
+        FOLDS["config.folds<br/>dates to index spans"]
         PARSE["grammar.parse<br/>ast trees, never eval"]
-        TRAIN["GP breeds on train<br/>Evaluator on panel.head(train end + 1)"]
-        HOF["hall of fame<br/>16 best distinct signals"]
-        CHOOSE{"gp._choose on validation<br/>IC ≥ 0.01, turnover ≤ 1.0,<br/>correlation ≤ 0.7"}
-        NONE["NO_QUALIFYING_CANDIDATE<br/>no test score"]
-        TEST["test Evaluator<br/>final pick only, once"]
-        COST["Evaluator.metrics<br/>delay 1, net = gross<br/>minus 10 bps x turnover"]
+        TRAIN["GP breeds on train<br/>panel cut at train end"]
+        HOF["hall of fame<br/>16 best distinct"]
+        CHOOSE{"gp._choose<br/>on validation"}
+        NONE["NO_QUALIFYING_<br/>CANDIDATE"]
+        TEST["test Evaluator<br/>final pick, once"]
     end
     subgraph CTRL["Controls"]
-        BASE["config baselines<br/>momentum_20d, reversal_1d"]
-        RS["gp.random_search<br/>equal budget, no breeding"]
+        BASE["baselines<br/>momentum_20d,<br/>reversal_1d"]
+        RS["gp.random_search<br/>equal budget"]
         ONE["range_10d<br/>one-line control"]
-        DIAG["scripts/diagnose_binance.py<br/>frozen ranking, beta and size<br/>neutralised IC, POST-HOC"]
     end
-    LLM["llm_seed.propose"]
+    COST["Evaluator.metrics<br/>delay 1, net = gross<br/>minus 10 bps x turnover"]
     RES[("results/binance_*.json")]
-    RUNS[("runs/binance-main/<br/>append-only SQLite,<br/>hash manifest")]
+    RUNS[("runs/binance-main/<br/>append-only SQLite")]
+    DIAG["diagnose_binance.py<br/>POST-HOC"]
 
-    FETCH -->|"SHA-256 vs .CHECKSUM"| CSV
-    UNI -.->|"verify-data: hashes,<br/>rows, dates"| CSV
-    CSV ==>|"daily bars, dates aligned"| PANEL
-    CFG ==>|"train, validation,<br/>test date spans"| FOLDS
-    PANEL ==>|"bars up to train end"| TRAIN
-    FOLDS ==>|"ordered, disjoint spans"| TRAIN
-    LLM -.->|"seeds only if use_seeds<br/>(false in the main run)"| PARSE
-    PARSE -->|"random trees and<br/>every offspring"| TRAIN
-    TRAIN ==>|"fitness: IC minus penalties"| HOF
-    TRAIN -->|"every node, each generation"| RUNS
+    UNI -.->|"verify-data"| CSV
+    CSV ==>|"daily bars"| PANEL
+    CFG ==>|"split dates"| FOLDS
+    PANEL ==>|"bars to train end"| TRAIN
+    FOLDS ==>|"disjoint spans"| TRAIN
+    LLM -.->|"seeds if use_seeds<br/>(off in main run)"| PARSE
+    PARSE -->|"trees,<br/>offspring"| TRAIN
+    TRAIN -->|"every node"| RUNS
+    TRAIN ==>|"fitness"| HOF
     HOF ==>|"16 candidates"| CHOOSE
-    CHOOSE ==>|"top of the shortlist"| TEST
+    CHOOSE ==>|"IC ≥ 0.01, turnover ≤ 1,<br/>correlation ≤ 0.7"| TEST
     CHOOSE -.->|"none qualify"| NONE
-    TEST ==>|"daily weights and labels"| COST
-    COST ==>|"printed summary"| RES
-    BASE -->|"same three evaluators"| COST
-    RS -->|"640 trees, same filter<br/>and validation rule"| COST
-    ONE -->|"scored beside the pick"| COST
-    RES -->|"the pick's committed<br/>gross and net"| DIAG
-    DIAG -->|"refuses unless it<br/>reproduces them"| RES
+    TEST ==>|"weights, labels"| COST
+    BASE -->|"same evaluators"| COST
+    RS -->|"640 trees, same<br/>filter and rule"| COST
+    ONE -->|"beside the pick"| COST
+    COST ==>|"summary"| RES
+    TEST ~~~ CTRL
+    RES -->|"pick's gross, net"| DIAG
+    DIAG -->|"refuses unless<br/>reproduced"| RES
 
     classDef data fill:#dbeafe,stroke:#1d4ed8,color:#0b1220
     classDef step fill:#f1f5f9,stroke:#475569,color:#0b1220
@@ -82,7 +79,7 @@ flowchart LR
     classDef ext  fill:#f8fafc,stroke:#94a3b8,color:#0b1220,stroke-dasharray:4 3
     classDef key  fill:#ede9fe,stroke:#6d28d9,color:#0b1220,stroke-width:2px
     class CSV,UNI,CFG data
-    class FETCH,PANEL,FOLDS,PARSE,BASE,RS,ONE,DIAG step
+    class PANEL,FOLDS,PARSE,BASE,RS,ONE,DIAG step
     class CHOOSE,NONE gate
     class RES,RUNS out
     class LLM ext
@@ -203,38 +200,37 @@ seeds.
 
 ```mermaid
 sequenceDiagram
-    participant CLI as cli.py (run, seeds)
+    participant CLI as cli.py
     participant P as llm_seed.propose
-    participant R as replay JSON file
+    participant R as replay JSON
     participant O as llm_seed.openrouter
-    participant M as OpenRouter (external)
-    participant G as grammar.parse
-    Note over CLI: use_seeds false reads no LLM output (llm_seed.no_seeds)
-    CLI->>P: brief and n from the config
-    P->>P: build_prompt (brief and grammar, never data)<br/>key = SHA-256 of the prompt
+    participant M as OpenRouter, external
+    Note over CLI: use_seeds false:<br/>no LLM output read
+    CLI->>P: brief and n
+    P->>P: build_prompt<br/>(brief, grammar, no data)<br/>key = SHA-256
     alt default: replay only
         P->>R: look up the key
-        R-->>P: stored prompt and response
-        Note over P,R: no entry: KeyError, refresh with --live<br/>stored prompt differs: ValueError
+        R-->>P: stored prompt<br/>and response
+        Note over P,R: no entry: KeyError<br/>prompt differs: ValueError
     else seeds --live: one request
         P->>O: prompt
-        Note over O: no OPENROUTER_API_KEY: refused, nothing sent
-        O->>M: POST to the pinned qwen/qwen3.8-27b:free<br/>temperature 0, reasoning effort low, max_tokens 8192
+        Note over O: no API key:<br/>refused, nothing sent
+        O->>M: POST, pinned model<br/>temperature 0
         M-->>O: JSON body
-        alt non-200 (429 rate limit), error field, finish_reason not stop,<br/>empty content, oversized body, another model
-            O--xCLI: RuntimeError, nothing saved, no retry
+        alt non-200, error field,<br/>not stop, empty,<br/>oversized, other model
+            O--xCLI: RuntimeError,<br/>nothing saved, no retry
         else accepted
-            O-->>P: text plus model, provider, response id
-            P->>R: save entry labelled REAL LLM OUTPUT
+            O-->>P: text, model,<br/>provider, id
+            P->>R: save, labelled<br/>REAL LLM OUTPUT
         end
     end
-    P->>G: every proposed line
-    G-->>P: accepted seeds, rejected lines with a reason,<br/>duplicates counted
-    P-->>CLI: seed record: source label, accepted, rejected
+    P->>P: grammar.parse each line:<br/>accepted, rejected with<br/>reason, duplicates
+    P-->>CLI: seed record
 ```
 
 Where in the code: `src/alpha_gp_lab/llm_seed.py` (`propose`, `build_prompt`, `prompt_sha256`,
-`openrouter`, `parse_response`, `no_seeds`), `src/alpha_gp_lab/cli.py` (`seed_record`, `load_inputs`),
+`openrouter`, `parse_response`, `no_seeds`), `src/alpha_gp_lab/grammar.py` (`parse`),
+`src/alpha_gp_lab/cli.py` (`seed_record`, `load_inputs`),
 `fixtures/llm_replay.json` (the only entry: a HAND-WRITTEN FIXTURE), `results/llm_live_attempt.json`.
 
 ## 5. How a result reaches the README
@@ -245,36 +241,36 @@ reproduce the committed main result first, and `check.sh` re-runs the main confi
 whenever the data is present.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph CFGS["Committed configs"]
-        MAINC[("binance_daily_config.json<br/>binance_walkforward_config.json<br/>91823e6")]
-        ANC[("binance_analysis_config.json<br/>881147e")]
-        DIC[("binance_diagnostics_config.json<br/>POST-HOC")]
+        MAINC[("daily + walkforward<br/>configs, 91823e6")]
+        ANC[("analysis config<br/>881147e")]
+        DIC[("diagnostics config<br/>POST-HOC")]
     end
-    RUN["python3.11 -m alpha_gp_lab run"]
+    RUN["python3.11 -m<br/>alpha_gp_lab run"]
     BUNDLE[("runs/binance-main/<br/>not committed")]
-    MAIN[("results/binance_daily_main.json<br/>results/binance_walkforward.json")]
-    CHECK{"scripts/check.sh<br/>exit 1 unless every float<br/>matches to 1e-9"}
-    AN{"scripts/analyze_binance.py<br/>20 GP and 20 random seeds,<br/>bootstrap, range_10d"}
-    DI{"scripts/diagnose_binance.py<br/>market state, constant rankings,<br/>neutralised IC, legs"}
-    ANJ[("results/binance_analysis.json")]
-    DIJ[("results/binance_diagnostics.json")]
-    PLOT["scripts/plot_binance.py<br/>needs matplotlib"]
-    FIG[("docs/figures/<br/>rolling_ic.png, cumulative_net.png")]
-    README["README.md<br/>3 to 4 significant figures"]
-    LEDGER["docs/real-data-runs.md<br/>full precision, run ledger"]
+    MAIN[("binance_daily_main.json<br/>binance_walkforward.json")]
+    CHECK{"scripts/check.sh<br/>floats match to 1e-9"}
+    AN{"analyze_binance.py<br/>20 + 20 seeds,<br/>bootstrap, range_10d"}
+    DI{"diagnose_binance.py<br/>market state, neutralised<br/>IC, legs"}
+    ANJ[("binance_analysis.json")]
+    DIJ[("binance_diagnostics.json")]
+    PLOT["plot_binance.py<br/>needs matplotlib"]
+    FIG[("docs/figures/<br/>two PNGs")]
+    README["README.md<br/>3 to 4 sig. figures"]
+    LEDGER["docs/real-data-runs.md<br/>full precision"]
 
     MAINC ==>|"--config"| RUN
-    RUN -->|"bundle, then verify"| BUNDLE
-    RUN ==>|"printed summary saved as"| MAIN
+    RUN -->|"bundle, verify"| BUNDLE
+    RUN ==>|"summary saved as"| MAIN
     MAIN -->|"expected output"| CHECK
-    RUN -->|"fresh run when<br/>data/binance-daily exists"| CHECK
-    ANC -->|"seeds, budget, rules"| AN
-    MAIN -->|"must reproduce<br/>the primary seed"| AN
+    RUN -->|"fresh run<br/>if data present"| CHECK
+    ANC -->|"seeds, budget"| AN
+    MAIN -->|"must reproduce<br/>primary seed"| AN
     AN -->|"writes"| ANJ
-    DIC -->|"windows, references, looks"| DI
-    MAIN -->|"must reproduce the pick's<br/>gross and net"| DI
-    ANJ -->|"expressions, IC series"| DI
+    DIC -->|"windows, looks"| DI
+    MAIN -->|"must reproduce<br/>gross and net"| DI
+    ANJ -->|"IC series"| DI
     DI -->|"writes"| DIJ
     ANJ -->|"series, table"| PLOT
     PLOT -->|"draws"| FIG
