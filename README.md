@@ -1,6 +1,6 @@
 # alpha-gp-lab: genetic-programming alpha search with pre-registered splits
 
-[![ci](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/ci.yml) [![lint](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/lint.yml/badge.svg)](https://github.com/hihihhi/alpha-gp-lab/actions/workflows/lint.yml)
+[![ci](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/ci.yml) [![lint](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/lint.yml/badge.svg)](https://github.com/oscar-chw/alpha-gp-lab/actions/workflows/lint.yml)
 
 after costs, with train, validation and test roles fixed in committed configs before any real-data
 run and an equal-budget random search as a control: the search may only *breed* on train data,
