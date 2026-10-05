@@ -1,31 +1,29 @@
 # alpha-gp-lab
 
-*choose* on validation data and take one untouched test score, with pre-registered real-data runs
-and controls. Python standard library only.
+data, *choose* on validation data and take one untouched test score, with pre-registered real-data
+runs and controls. Python standard library only.
 
-**Real data:** 6.7 years of Binance daily bars, 34 coins (2020-01 to 2026-08). Splits fixed in a
-committed config before any run: train 2020-2023, validation 2024, test 2025-01 to 2026-08.
-Signals use data through the previous day only (delay 1), costs are 10 bps per side, and 176
-looks at the test window are counted (walk-forward fold 3's validation and the post-hoc data
-splits are not; see Results).
+pipeline generates candidates from templates (fields × operators × windows), batch-simulates them
+and refines the best with group/industry neutralisation and decay settings. It does not use
+discipline and expression style, not the algorithm.
 
-**Real-data result (Binance daily, 34 coins, test 2025-01 to 2026-08): test rank IC 0.082, but
-most of it is a fixed tilt (a ranking frozen at end-2024 scores 87% of it, a constant low-beta
-ranking 81%) in a market where the daily-rebalanced equal-weight basket of the 34 coins fell
-65.8%, and its returns are indistinguishable from zero before and after costs (gross t 0.96,
-Newey-West 0.91; net t 0.22, Newey-West 0.21).** The GP, an equal-budget random search and a
-one-line range factor all score about 0.08. After removing beta, 65% of the IC remains; after
-beta and size, IC 0.049 (60%), and it comes from down days, consistent with the known
-low-volatility effect (a 60-day low-volatility ranking scores 0.045 under the same
-neutralisation). Sources: `results/binance_*.json` (diagnostics post-hoc); survivorship-biased
+  and selection on validation, never on the final test.
+- *Different here:* genetic programming instead of template enumeration; train, validation and
+  test roles fixed in committed configs before any real-data run; an equal-budget random search as
 
-![Cumulative net return on the test period: the GP pick, the random-search pick, the simple control and 20-day momentum all end between +0.04 and +0.10 summed over 607 days, while 1-day reversal loses 0.93](docs/figures/cumulative_net.png)
+**Run it** (Python 3.11, nothing to install; under 5 minutes on the development machine):
 
 ```sh
 export PYTHONPATH=src
 python3.11 -m alpha_gp_lab demo --out runs/demo    # SYNTHETIC regime-change demo, ~10 s
 bash scripts/check.sh                              # tests, demo, replays; real-data steps if data/ exists
 ```
+
+**Real-data result, in one line:** on Binance daily bars (34 surviving coins, test 2025-01 to
+2026-08) the pick's test rank IC is about 0.08, but its returns are not significant before or
+after costs (gross t 0.96, net t 0.22), and an equal-budget random search matched it (IC 0.080 vs 0.082): a
+neutral result, with no evidence of a tradable signal. Diagnostics and sources are in
+[Results](#results-real-numbers-with-their-source-synthetic-clearly-labelled).
 
 ## The problem
 
@@ -206,6 +204,20 @@ before the fee; "sum" adds daily values without compounding; ICIR is the mean da
 standard deviation.
 
 ### Real data (Binance daily, 34 coins, 2020–2026)
+
+**Summary.** 6.7 years of Binance daily bars, 34 coins (2020-01 to 2026-08). Splits fixed in a
+committed config before any run: train 2020-2023, validation 2024, test 2025-01 to 2026-08.
+Signals use data through the previous day only (delay 1), costs are 10 bps per side, and 176
+looks at the test window are counted (walk-forward fold 3's validation and the post-hoc data
+splits are not; see below). On the test window the pick's rank IC is 0.082, but
+most of it is a fixed tilt (a ranking frozen at end-2024 scores 87% of it, a constant low-beta
+ranking 81%) in a market where the daily-rebalanced equal-weight basket of the 34 coins fell
+65.8%, and its returns are indistinguishable from zero before and after costs (gross t 0.96,
+Newey-West 0.91; net t 0.22, Newey-West 0.21). The GP, an equal-budget random search and a
+one-line range factor all score about 0.08. After removing beta, 65% of the IC remains; after
+beta and size, IC 0.049 (60%), and it comes from down days, consistent with the known
+low-volatility effect (a 60-day low-volatility ranking scores 0.045 under the same
+neutralisation). Sources: `results/binance_*.json` (diagnostics post-hoc); survivorship-biased
 
 **Survivorship bias: these 34 coins are USDT pairs still trading in 2026, chosen in 2026.** The
 rule, recorded in `fixtures/binance_universe.json`: the orchestrating agent picked, on 2026-10-03,
@@ -427,8 +439,9 @@ does not need it). Rolling 60-day mean test IC:
 
 ![Rolling 60-day test rank IC: the GP pick, the random-search pick and the simple control move together between about 0 and 0.15; momentum and reversal swing around zero](docs/figures/rolling_ic.png)
 
-The cumulative net return on test, after 10 bps per side, is the figure at the top of this README
-(`docs/figures/cumulative_net.png`).
+Cumulative net return on test, after 10 bps per side:
+
+![Cumulative net return on the test period: the GP pick, the random-search pick, the simple control and 20-day momentum all end between +0.04 and +0.10 summed over 607 days, while 1-day reversal loses 0.93](docs/figures/cumulative_net.png)
 
 #### Walk-forward
 
