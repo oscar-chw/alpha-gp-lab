@@ -4,8 +4,7 @@
 # of the demo because the Binance CSVs are never committed (see docs/reproduce.md).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PY="${PYTHON:-$(command -v python3.11 || command -v python3)}"
-export PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1
+source scripts/env.sh
 
 out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT

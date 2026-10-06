@@ -3,8 +3,7 @@
 # Exits non-zero on the first failure.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PY="${PYTHON:-$(command -v python3.11 || command -v python3)}"
-export PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1
+source scripts/env.sh
 
 "$PY" -m unittest discover -s tests
 "$PY" tests/hand_cases.py > /dev/null
