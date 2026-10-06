@@ -4,6 +4,7 @@ import statistics
 import unittest
 
 from helpers import panel_for, perturbed, small_config
+from alpha_gp_lab.data import Panel
 from alpha_gp_lab.evaluate import Evaluator, score
 from alpha_gp_lab.gp import random_tree
 from alpha_gp_lab.grammar import parse
@@ -52,6 +53,27 @@ class Evaluation(unittest.TestCase):
         small, big = parse('close'), parse('rank(ts_mean(close, 5))')
         self.assertGreater(score(m, small, 0.02, 0.001), score(m, big, 0.02, 0.001))
         self.assertGreater(score(m, small, 0.0, 0.0), score(m, small, 0.02, 0.0))
+
+    def test_turnover_pays_for_the_drift_back_to_target(self):
+        """A ranking that never changes still trades: each day's returns move the book off its target.
+
+        Charging only |w_t - w_{t-1}| priced this at zero and overstated net; the trade from the
+        drifted book w_{t-1}(1 + r_{t-1}) back to w_t must be paid."""
+        rng = random.Random(11)
+        close = [[100.0] * 4]
+        for _ in range(9):
+            close.append([c * (1 + rng.uniform(-0.1, 0.1)) for c in close[-1]])
+        bars = {k: [list(r) for r in close] for k in ('open', 'high', 'low', 'close')}
+        bars['volume'] = [[1.0, 2.0, 3.0, 4.0] for _ in close]   # fixed ranking every day
+        panel = Panel(('A', 'B', 'C', 'D'), ('g',) * 4, tuple(f'2024-01-{d:02d}' for d in range(1, 11)), bars, True, 'SYNTHETIC')
+        m = Evaluator(panel, 1, 10).metrics(parse('volume'), 3, 8, detail=True)
+        w = [-0.375, -0.125, 0.125, 0.375]
+        want = [math.fsum(abs(a * (close[t][i] / close[t - 1][i] - 1)) for i, a in enumerate(w)) for t in range(3, 8)]
+        self.assertGreater(min(want), 0.0)
+        self.assertAlmostEqual(m['mean_turnover'], statistics.fmean(want), places=12)
+        gross = [math.fsum(a * (close[t + 1][i] / close[t][i] - 1) for i, a in enumerate(w)) for t in range(3, 8)]
+        for got, g, to in zip(m['net_series'], gross, want):
+            self.assertAlmostEqual(got, g - 0.001 * to, places=12)
 
     def test_t_statistics_and_net_sum_match_the_statistics_module(self):
         m = Evaluator(self.panel, 1, 5).metrics(parse('-returns'), 20, 70, detail=True)

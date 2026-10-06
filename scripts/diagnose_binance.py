@@ -64,10 +64,11 @@ def portfolio(rows, labels, start, end, delay, fee, keep):
     zeros = [0.0] * len(keep)
     gross, net, book = [], [], []
     for t in range(start, end):
-        w, prev = weights[t] or zeros, weights[t - 1] or zeros
+        w, prev = weights[t] or zeros, weights[t - 1]
+        held = [a * (1 + labels[t - 1][i]) for a, i in zip(prev, keep)] if prev else zeros   # drifted book, as the evaluator
         g = math.fsum(a * labels[t][i] for a, i in zip(w, keep))
         gross.append(g)
-        net.append(g - fee * math.fsum(abs(a - b) for a, b in zip(w, prev)))
+        net.append(g - fee * math.fsum(abs(a - b) for a, b in zip(w, held)))
         book.append(w)
     return gross, net, book
 

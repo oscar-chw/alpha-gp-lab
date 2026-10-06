@@ -43,11 +43,19 @@ def cases():
     assert (sxy, sxx, syy) == (2, 5, 5)
     ic = sxy / sxx                                   # sqrt(sxx * syy) = 5 exactly here
     weights, prev_weights = unit_gross_weights(signal), unit_gross_weights(previous)
-    turnover = sum(abs(a - b) for a, b in zip(weights, prev_weights))
+    target_change = sum(abs(a - b) for a, b in zip(weights, prev_weights))
+    # The book held over interval t=1 has drifted with that interval's returns by close[2]; the
+    # rebalance trades from there to the new target (P&L goes to cash, the book stays unit gross).
+    prev_labels = [F(b, a) - 1 for a, b in zip(close[1], close[2])]   # interval t=1: close[1] -> close[2]
+    held = [w * (1 + r) for w, r in zip(prev_weights, prev_labels)]
+    turnover = sum(abs(a - b) for a, b in zip(weights, held))
     gross = sum(w * r for w, r in zip(weights, labels))
     # Second route to the same gross return: buy w/P shares at close[2], sell at close[3].
     shares = [w / p for w, p in zip(weights, close[2])]
     assert sum(q * (b - a) for q, a, b in zip(shares, close[2], close[3])) == gross
+    # Second route to the same turnover: shares bought at close[1], against the target's shares, at close[2] prices.
+    prev_shares = [w / p for w, p in zip(prev_weights, close[1])]
+    assert sum(abs(q - h) * p for q, h, p in zip(shares, prev_shares, close[2])) == turnover
     fee = F(5, 10000)                                # 5 bps per unit of turnover
     net = gross - fee * turnover
     size = 3                                         # e.g. rank(ts_delta(close, 1)) has three nodes
@@ -60,10 +68,11 @@ def cases():
     members = [group_rows[:2]] * 2 + [group_rows[2:]] * 2
     neutral = [x - F(sum(g), len(g)) for x, g in zip(group_rows, members)]
 
-    out = dict(labels=labels, ic=ic, weights=weights, prev_weights=prev_weights, turnover=turnover,
+    out = dict(labels=labels, ic=ic, weights=weights, prev_weights=prev_weights, held=held, turnover=turnover,
                gross=gross, net=net, score=score, ties=ties, ts_rank=ts_rank, decay=decay, neutral=neutral)
-    assert ic == F(2, 5) and turnover == 2 and gross == F(1, 20) and net == F(49, 1000)
-    assert weights == [F(-3, 8), F(-1, 8), F(1, 8), F(3, 8)] and score == F(357, 1000)
+    assert ic == F(2, 5) and target_change == 2 and gross == F(1, 20)
+    assert held == [F(15, 4), F(5, 8), F(-5, 12), F(-15, 16)] and turnover == F(323, 48) and net == F(4477, 96000)
+    assert weights == [F(-3, 8), F(-1, 8), F(1, 8), F(3, 8)] and score == F(3149, 12000)
     assert ties == [F(5, 2), F(5, 2), 4, 1] and ts_rank == F(3, 4) and decay == F(7, 3)
     assert neutral == [-1, 1, -5, 5]
     return out

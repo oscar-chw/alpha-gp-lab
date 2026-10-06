@@ -10,10 +10,10 @@
             "intervals": 607,
             "mean_gross": 0.0003768912600628651,
             "mean_ic": -0.006158512090458223,
-            "mean_net": 7.23017820582705e-05,
-            "mean_turnover": 0.3045894780045946,
-            "net_tstat": 0.1835034941876255,
-            "sum_net": 0.04388718170937019,
+            "mean_net": 6.117198382454931e-05,
+            "mean_turnover": 0.31571927623831575,
+            "net_tstat": 0.15525285173780218,
+            "sum_net": 0.03713139418150143,
             "valid_ic_intervals": 607
           },
           "validation": {
@@ -21,10 +21,10 @@
             "intervals": 365,
             "mean_gross": 0.001002139977275883,
             "mean_ic": -0.017496146192444408,
-            "mean_net": 0.0006836112765127413,
-            "mean_turnover": 0.3185287007631417,
-            "net_tstat": 1.291498090082651,
-            "sum_net": 0.24951811592715056,
+            "mean_net": 0.0006717461375297615,
+            "mean_turnover": 0.3303938397461214,
+            "net_tstat": 1.2690997717189914,
+            "sum_net": 0.24518734019836297,
             "valid_ic_intervals": 365
           }
         },
@@ -35,10 +35,10 @@
             "intervals": 607,
             "mean_gross": -0.0002194546543761369,
             "mean_ic": 0.011485586060223782,
-            "mean_net": -0.0015298070676223413,
-            "mean_turnover": 1.3103524132462043,
-            "net_tstat": -4.090451699976516,
-            "sum_net": -0.9285928900467612,
+            "mean_net": -0.001531218983195378,
+            "mean_turnover": 1.311764328819241,
+            "net_tstat": -4.093907881235119,
+            "sum_net": -0.9294499227995945,
             "valid_ic_intervals": 607
           },
           "validation": {
@@ -46,10 +46,10 @@
             "intervals": 365,
             "mean_gross": -0.0004089653481307361,
             "mean_ic": 0.012864710545246051,
-            "mean_net": -0.001741581359885962,
-            "mean_turnover": 1.3326160117552257,
-            "net_tstat": -3.476151383135997,
-            "sum_net": -0.6356771963583762,
+            "mean_net": -0.0017446884189456892,
+            "mean_turnover": 1.3357230708149535,
+            "net_tstat": -3.4817671742843497,
+            "sum_net": -0.6368112729151766,
             "valid_ic_intervals": 365
           }
         }
@@ -63,19 +63,19 @@
         "validation": null
       },
       "rejected": {
-        "rejected_degenerate": 28,
-        "rejected_duplicate": 143,
-        "rejected_equivalent": 184,
-        "rejected_limits": 17
+        "rejected_degenerate": 29,
+        "rejected_duplicate": 128,
+        "rejected_equivalent": 176,
+        "rejected_limits": 26
       },
       "selected": "abs(ts_decay_linear((low / close), 10))",
       "selected_origin": {
-        "generation": 6,
-        "operation": "crossover"
+        "generation": 9,
+        "operation": "mutation:window"
       },
       "shortlist": [
         "abs(ts_decay_linear((low / close), 10))",
-        "ts_sum((low / open), 20)"
+        "abs(ts_decay_linear(ts_decay_linear((open / high), 20), 20))"
       ],
       "split_dates": {
         "test": [
@@ -97,22 +97,22 @@
         "intervals": 607,
         "mean_gross": 0.0003534791635240535,
         "mean_ic": 0.08208763518369619,
-        "mean_net": 8.049329508034882e-05,
-        "mean_turnover": 0.27298586844370465,
-        "net_tstat": 0.2184396051637011,
-        "sum_net": 0.04885943011377173,
+        "mean_net": 7.005546229333541e-05,
+        "mean_turnover": 0.28342370123071803,
+        "net_tstat": 0.1901215321505456,
+        "sum_net": 0.0425236656120546,
         "valid_ic_intervals": 607
       },
-      "unique_expressions": 487,
+      "unique_expressions": 492,
       "validation": {
         "ic_tstat": 4.057330292521756,
         "intervals": 365,
         "mean_gross": -0.00014759565817287003,
         "mean_ic": 0.07148111461736868,
-        "mean_net": -0.00041132983838806654,
-        "mean_turnover": 0.2637341802151965,
-        "net_tstat": -0.6699945071164971,
-        "sum_net": -0.15013539101164428,
+        "mean_net": -0.0004237607965071656,
+        "mean_turnover": 0.27616513833429557,
+        "net_tstat": -0.6901667406122562,
+        "sum_net": -0.15467269072511544,
         "valid_ic_intervals": 365
       },
       "validation_candidates": 16

@@ -181,7 +181,10 @@ class Evaluator:
             raise ValueError('split outside this evaluator\'s view')
 
     def metrics(self, node, start, end, detail=False):
-        """Mean rank IC, rebalancing turnover and net return over intervals t in [start, end)."""
+        """Mean rank IC, rebalancing turnover and net return over intervals t in [start, end).
+
+        Turnover on interval t is sum |w_t - w_{t-1} (1 + r_{t-1})|: from the drifted book to the new target.
+        """
         self._check(start, end)
         rows = self.signal(node)
         weights = {}
@@ -199,9 +202,13 @@ class Evaluator:
         ics, turnover, gross_ret, net = [], [], [], []
         for t in range(start, end):
             w, rk = weights[t]
-            prev = weights[t - 1][0] or zeros
+            prev = weights[t - 1][0]
+            # Trade from the book as it stands at close[t]: yesterday's weights after interval t-1's
+            # returns moved them (P&L goes to cash; the book is unit gross each day). Charging only
+            # |w_t - w_{t-1}| missed the trade back to target and overstated net (2026-10-06 amendment).
+            held = [a * (1 + r) for a, r in zip(prev, self._labels[t - 1])] if prev else zeros
             ics.append(pearson(rk, self._label_ranks[t]) if rk else None)
-            to = math.fsum(abs(a - b) for a, b in zip(w or zeros, prev))
+            to = math.fsum(abs(a - b) for a, b in zip(w or zeros, held))
             g = math.fsum(a * r for a, r in zip(w, self._labels[t])) if w else 0.0
             turnover.append(to); gross_ret.append(g); net.append(g - self.fee * to)
         valid = [x for x in ics if x is not None]
