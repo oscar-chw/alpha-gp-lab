@@ -37,11 +37,26 @@ class DateFolds(unittest.TestCase):
         self.dates = tuple(f'2024-{m:02d}-{d:02d}' for m, n in ((1, 31), (2, 29), (3, 31), (4, 30)) for d in range(1, n + 1))[:120]
 
     def test_date_pairs_resolve_to_the_dates_inside_them(self):
-        self.config['splits'] = {'train': ['2023-06-01', '2024-01-31'], 'validation': ['2024-02-01', '2024-02-29'],
-                                 'test': ['2024-03-01', '2024-12-31']}
+        self.config['splits'] = {'train': ['2024-01-01', '2024-01-31'], 'validation': ['2024-02-01', '2024-02-29'],
+                                 'test': ['2024-03-01', '2024-04-29']}
         validate(self.config)
         (fold,) = folds(self.config, self.dates)
         self.assertEqual(fold, {'train': [0, 30], 'validation': [31, 59], 'test': [60, 119]})
+        # A span edge on a date the panel lacks resolves to the nearest panel date inside the span.
+        gappy = tuple(d for d in self.dates if d not in ('2024-01-31', '2024-02-01'))
+        (fold,) = folds(self.config, gappy)
+        self.assertEqual(fold, {'train': [0, 29], 'validation': [30, 57], 'test': [58, 117]})
+
+    def test_date_spans_outside_the_panel_are_refused_not_clamped(self):
+        """A test end after the last date used to resolve to the last date: a shorter test window under the same name."""
+        for name, span in (('train', ['2023-06-01', '2024-01-31']), ('test', ['2024-03-01', '2029-12-31']),
+                           ('test', ['2024-03-01', '2024-04-30'])):
+            config = copy.deepcopy(self.config)
+            config['splits'] = {'train': ['2024-01-01', '2024-01-31'], 'validation': ['2024-02-01', '2024-02-29'],
+                                'test': ['2024-03-01', '2024-04-29'], name: span}
+            validate(config)
+            with self.assertRaisesRegex(ValueError, f'{name} dates .* extend outside the panel', msg=span):
+                folds(config, self.dates)
 
     def test_a_list_of_folds_runs_as_walk_forward_with_dates_reported(self):
         self.config['splits'] = [

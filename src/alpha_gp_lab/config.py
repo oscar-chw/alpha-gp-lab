@@ -200,11 +200,15 @@ def validate(config):
 
 
 def _resolve(split, dates):
-    """Index spans for one fold. A date pair becomes the first and last panel dates inside it."""
+    """Index spans for one fold. A date pair, which must lie within the panel's dates, becomes the
+    first and last panel dates inside it."""
     out = {}
     for name in ('train', 'validation', 'test'):
         start, end = split[name]
         if isinstance(start, str):
+            # Clamping to the panel would silently shorten a split while the report kept its stated dates.
+            if start < dates[0] or end > dates[-1]:
+                raise ValueError(f'{name} dates {split[name]} extend outside the panel ({dates[0]} to {dates[-1]})')
             start, end = bisect_left(dates, start), bisect_right(dates, end) - 1
             if not 0 <= start < end:
                 raise ValueError(f'{name} dates {split[name]} cover fewer than two panel dates')
