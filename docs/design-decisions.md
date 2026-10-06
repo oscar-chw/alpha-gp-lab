@@ -14,7 +14,7 @@ Why the lab is built the way it is, and what each choice costs.
   against a regime that starts after validation (the synthetic demo shows that).
 - **Pre-registered real-data configs.** The configs were committed before any real-data run, so
   thresholds could not be tuned on the results. The cost: guesses such as min IC 0.01 stay
-  fixed even where they turn out weak (walk-forward fold 1).
+  fixed even where they turn out weak (walk-forward fold 1 now picks `-volume`, a size proxy, with a validation IC of 0.020: only twice the 0.01 floor).
 - **Rank IC as fitness and selection score.** It is robust to fat-tailed returns and needs no
   position sizing. The cost: it ignores costs and dollar P&L, and on the real data it picked a
   signal whose validation net was negative.

@@ -300,7 +300,7 @@ does not need it). Rolling 60-day mean test IC:
 
 Cumulative net return on test, after 10 bps per side:
 
-![Cumulative net return on the test period: the GP pick, the random-search pick, the simple control and 20-day momentum all end between +0.04 and +0.09 summed over 607 days, while 1-day reversal loses 0.93](figures/cumulative_net.png)
+![Cumulative net return on the test period: the GP pick, the random-search pick, the simple control and 20-day momentum all end between +0.037 and +0.086 summed over 607 days, while 1-day reversal loses 0.93](figures/cumulative_net.png)
 
 ## Walk-forward
 

@@ -106,7 +106,7 @@ def _welch(a, b):
 
 
 def _p(t):
-    """Two-sided p of a t-statistic; None when the t-statistic is (zero spread, or under two days)."""
+    """Two-sided p of a t-statistic; None when the t-statistic is None (zero spread, or under two days)."""
     return None if t is None else two_sided_p(t)
 
 

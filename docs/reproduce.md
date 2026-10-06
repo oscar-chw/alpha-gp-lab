@@ -43,8 +43,8 @@ python3.11 scripts/diagnose_binance.py --config fixtures/binance_diagnostics_con
 "$PORTFOLIO_VENV/bin/python" scripts/plot_binance.py   # writes docs/figures/*.png
 ```
 
-`check.sh` and `demo.sh` run `$PYTHON` if set, else `$PORTFOLIO_VENV/bin/python`, else `python3.11`
-(`scripts/env.sh`); a named interpreter that does not exist stops them with exit 3.
+`check.sh` and `demo.sh` run `$PYTHON` if set, else `$PORTFOLIO_VENV/bin/python`, else `python3.11`,
+else `python3` (`scripts/env.sh`); a named interpreter that does not exist stops them with exit 3.
 `check.sh` runs `verify-data` and re-runs the main real-data config against
 `results/binance_daily_main.json` when `data/binance-daily/` exists, and prints a skip message
 when it does not. `seeds --live --config <config>` refreshes a replay entry with one request to
