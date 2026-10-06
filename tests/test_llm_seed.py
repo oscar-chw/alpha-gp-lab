@@ -4,6 +4,7 @@ import io
 import json
 import os
 import tempfile
+import traceback
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -178,6 +179,24 @@ class OpenRouter(unittest.TestCase):
         self.refused(FakePost(raw=b' ' * (MAX_BODY_BYTES + 1)), 'over 1000000 bytes')
         self.assertEqual(openrouter('PROMPT', post=FakePost(raw=json.dumps(answer()).encode().ljust(MAX_BODY_BYTES)))[0],
                          'rank(close)\nts_mean(volume, 5)\n')
+
+    def test_a_multi_line_key_is_refused_and_never_shown(self):
+        """A key file with two lines (a rotated key plus the old one) must not put the key in a traceback."""
+        two_lines = KEY + '\nold-openrouter-key-4567'
+        with mock.patch.dict(os.environ, {'OPENROUTER_API_KEY': two_lines}), \
+                mock.patch.object(llm_seed, 'OPENROUTER_URL', 'http://127.0.0.1:9/'):
+            with self.assertRaisesRegex(RuntimeError, 'whitespace or control characters') as ctx:
+                openrouter('PROMPT')   # the real urllib path: http.client would quote the header
+        shown = ''.join(traceback.format_exception(ctx.exception))
+        self.assertNotIn(KEY, shown)
+        self.assertNotIn('old-openrouter-key', shown)
+
+    def test_a_transport_error_quoting_the_key_is_redacted(self):
+        def post(url, headers, body, timeout):
+            raise ValueError('Invalid header value %r' % headers['Authorization'].encode())
+        with self.assertRaisesRegex(RuntimeError, r'request failed: ValueError: .*\[key\]') as ctx:
+            openrouter('PROMPT', post=post)
+        self.assertNotIn(KEY, ''.join(traceback.format_exception(ctx.exception)))
 
     def test_missing_key_fails_loudly_before_any_request(self):
         for value in (None, '', '  \n'):

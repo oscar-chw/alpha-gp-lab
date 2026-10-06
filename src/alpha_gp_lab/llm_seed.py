@@ -113,13 +113,20 @@ def openrouter(prompt, post=http_post, timeout=120):
     key = os.environ.get(KEY_ENV, '').strip()
     if not key:
         raise RuntimeError(f'live mode needs {KEY_ENV} set (an OpenRouter API key); nothing was sent')
+    if any(c.isspace() or not c.isprintable() for c in key):
+        # A two-line key file made http.client raise ValueError('Invalid header value b"Bearer <key>"'), unredacted.
+        raise RuntimeError(f'{KEY_ENV} contains whitespace or control characters (a multi-line key file?); nothing was sent')
 
     def refuse(why):
         raise RuntimeError(f'OpenRouter {MODEL}: {why}'.replace(key, '[key]'))
     body = json.dumps(dict(model=MODEL, messages=[dict(role='user', content=prompt)], temperature=0,
                            max_tokens=MAX_TOKENS, reasoning=REASONING)).encode()
-    status, raw = post(OPENROUTER_URL, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
-                       body, timeout)
+    try:
+        status, raw = post(OPENROUTER_URL, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+                           body, timeout)
+    except Exception as exc:
+        # Transport errors can quote the request headers; show a redacted message and drop the chained original.
+        raise RuntimeError(f'OpenRouter {MODEL}: request failed: {type(exc).__name__}: {exc}'.replace(key, '[key]')) from None
     if len(raw) > MAX_BODY_BYTES:
         refuse(f'response body over {MAX_BODY_BYTES} bytes (HTTP {status})')
     try:
