@@ -4,7 +4,7 @@ import importlib.util
 import io
 import socket
 import tempfile
-import time
+import threading
 import unittest
 import zipfile
 from pathlib import Path
@@ -97,14 +97,29 @@ class FetchScript(unittest.TestCase):
             self.assertFalse(out.exists())
 
     def test_a_stalled_server_times_out_instead_of_hanging(self):
-        """A server that accepts the connection and never answers: the real urlopen must give up."""
+        """A server that accepts the connection and never answers: the real urlopen must give up.
+
+        fetch runs in a daemon thread that is joined with a limit, so a fetch that stops passing the
+        timeout through fails this test in 10 s instead of hanging the whole suite.
+        """
+        outcome = []
+
+        def call(url):
+            try:
+                fetch.fetch(url, timeout=0.5)
+            except BaseException as exc:   # the thread must report, whatever was raised
+                outcome.append(exc)
+
         with socket.socket() as server:
             server.bind(('127.0.0.1', 0))
             server.listen(1)
-            started = time.monotonic()
-            with self.assertRaises(OSError):   # socket timeout, possibly wrapped in URLError
-                fetch.fetch(f'http://127.0.0.1:{server.getsockname()[1]}/x.zip', timeout=0.5)
-            self.assertLess(time.monotonic() - started, 10)
+            worker = threading.Thread(target=call, args=(f'http://127.0.0.1:{server.getsockname()[1]}/x.zip',),
+                                      daemon=True)
+            worker.start()
+            worker.join(10)
+            self.assertFalse(worker.is_alive(), 'fetch did not give up on a stalled server: no timeout reached urlopen')
+        self.assertEqual(len(outcome), 1)
+        self.assertIsInstance(outcome[0], OSError)   # socket timeout, possibly wrapped in URLError
 
 
 if __name__ == '__main__':
