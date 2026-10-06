@@ -1,4 +1,5 @@
 """The analysis and diagnostics scripts end to end, in subprocesses, on a small SYNTHETIC config."""
+import importlib.util
 import json
 import os
 import subprocess
@@ -83,6 +84,67 @@ class Analysis(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn('does not reproduce', proc.stderr)
         self.assertFalse((d / 'bad.json').exists())
+
+
+def analyse(folder, seeds, test=None):
+    """Run the main config, then the analysis on it; return (process, output or None)."""
+    d = Path(folder)
+    config = small_config()
+    config['llm']['use_seeds'] = False
+    config['baselines'] = {'reversal_1d': '-returns'}
+    if test:
+        config['splits']['test'] = test
+    (d / 'main.json').write_text(json.dumps(config))
+    run = sh('-m', 'alpha_gp_lab', 'run', '--config', str(d / 'main.json'), '--out', str(d / 'run'))
+    assert run.returncode == 0, run.stderr
+    (d / 'main_result.json').write_text(run.stdout)
+    plan = dict(name='t', main_config='main.json', main_result='main_result.json', primary_seed=config['seed'],
+                seeds=[config['seed'] + k for k in range(seeds)], random_search_budget=20, control={},
+                interpretation_references={}, bootstrap=dict(block=5, reps=50, seed=1, level=0.9), newey_west_lags=[3],
+                bonferroni_counts=['validation_candidates'])
+    (d / 'plan.json').write_text(json.dumps(plan))
+    proc = sh('scripts/analyze_binance.py', '--config', str(d / 'plan.json'), '--out', str(d / 'out.json'), '--workers', '2')
+    return proc, json.loads((d / 'out.json').read_text()) if proc.returncode == 0 else None
+
+
+class AnalysisEdgeCases(unittest.TestCase):
+    """Outcomes the pre-registered rule can produce must be reported, not crash after all the search work."""
+
+    def test_one_seed_reports_the_rule_as_undecided(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proc, out = analyse(tmp, seeds=1)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        for m in ('mean_ic', 'mean_net'):
+            d = out['seeds']['gp_minus_random'][m]
+            self.assertIsNone(d['standard_error'])
+            self.assertIsNone(d['gp_beats_random'])
+            self.assertEqual(d['undecided'], 'too few picks: GP 1, random search 1')
+
+    def test_an_undefined_ic_t_statistic_gives_no_p_value(self):
+        """One test interval: the evaluator's ic_tstat is None (fewer than two days), so there is no p to report."""
+        with tempfile.TemporaryDirectory() as tmp:
+            proc, out = analyse(tmp, seeds=2, test=[118, 119])
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        sig = out['significance']
+        self.assertIsNone(sig['ic_tstat_iid'])
+        self.assertIsNone(sig['p_iid'])
+        self.assertEqual(sig['bonferroni_iid']['validation_candidates']['p'], None)
+        self.assertIsNone(sig['newey_west']['3']['p'])
+
+    def test_no_qualifying_seed_is_counted_not_averaged(self):
+        spec = importlib.util.spec_from_file_location('analyze_binance', ROOT / 'scripts' / 'analyze_binance.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        none = mod._over_seeds([dict(test=None), dict(test=None)])
+        self.assertEqual((none['seeds'], none['no_qualifying_candidate'], none['mean_ic'], none['mean_net']), (2, 2, None, None))
+        some = mod._over_seeds([dict(test=dict(mean_ic=0.1, mean_net=0.0)), dict(test=dict(mean_ic=0.3, mean_net=0.0))])
+        verdict = mod._welch(some['mean_ic'], none['mean_ic'])
+        self.assertEqual((verdict['gp_beats_random'], verdict['undecided']), (None, 'too few picks: GP 2, random search 0'))
+        def ic(*values):
+            return mod._over_seeds([dict(test=dict(mean_ic=v, mean_net=0.0)) for v in values])['mean_ic']
+        close, far = mod._welch(ic(0.1, 0.3), ic(0.0, 0.2)), mod._welch(ic(1.0, 1.2), ic(0.0, 0.2))
+        self.assertAlmostEqual(close['standard_error'], 0.02 ** 0.5)   # each side: sd^2 0.02 over 2 seeds
+        self.assertEqual((close['gp_beats_random'], far['gp_beats_random']), (False, True))
 
 
 class Diagnostics(unittest.TestCase):

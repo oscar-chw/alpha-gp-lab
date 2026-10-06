@@ -85,19 +85,33 @@ def _difference(a, b, plan):
 
 
 def _over_seeds(rows):
+    """Per-metric summary of the seeds that selected a pick; None for a metric when no seed did."""
     picked = [r for r in rows if r['test']]
     out = dict(seeds=len(rows), no_qualifying_candidate=len(rows) - len(picked))
     for m in ('mean_ic', 'mean_net'):
         xs = [r['test'][m] for r in picked]
         out[m] = dict(mean=statistics.fmean(xs), sd=statistics.stdev(xs) if len(xs) > 1 else None,
-                      min=min(xs), max=max(xs), positive=sum(x > 0 for x in xs), values=xs)
+                      min=min(xs), max=max(xs), positive=sum(x > 0 for x in xs), values=xs) if xs else None
     return out
 
 
 def _welch(a, b):
-    """Difference of means and its Welch standard error."""
-    return dict(difference=a['mean'] - b['mean'],
-                standard_error=math.sqrt(a['sd'] ** 2 / len(a['values']) + b['sd'] ** 2 / len(b['values'])))
+    """Difference of means, its Welch standard error and the pre-registered 2-SE rule. With fewer than two
+    picks on either side there is no standard error: the rule cannot be applied, and the reason is reported."""
+    if a is None or b is None or a['sd'] is None or b['sd'] is None:
+        return dict(difference=a['mean'] - b['mean'] if a and b else None, standard_error=None, gp_beats_random=None,
+                    undecided='too few picks: GP {}, random search {}'.format(*(len(x['values']) if x else 0 for x in (a, b))))
+    se = math.sqrt(a['sd'] ** 2 / len(a['values']) + b['sd'] ** 2 / len(b['values']))
+    return dict(difference=a['mean'] - b['mean'], standard_error=se, gp_beats_random=a['mean'] - b['mean'] > 2 * se)
+
+
+def _p(t):
+    """Two-sided p of a t-statistic; None when the t-statistic is (zero spread, or under two days)."""
+    return None if t is None else two_sided_p(t)
+
+
+def _bonferroni(p, m):
+    return None if p is None else bonferroni(p, m)
 
 
 def main(argv=None):
@@ -141,20 +155,18 @@ def main(argv=None):
             sys.exit(f'baseline {name} does not reproduce ' + plan['main_result'])
 
     inference = {n: _inference(s['ic_series'], s['net_series'], plan) for n, s in series.items()}
-    p_iid = two_sided_p(gp0['test']['ic_tstat'])
+    p_iid = _p(gp0['test']['ic_tstat'])
     significance = dict(ic_tstat_iid=gp0['test']['ic_tstat'], p_iid=p_iid, newey_west={})
     counts = dict(validation_candidates=gp0['trials']['validation'], unique_expressions=gp0['trials']['distinct'])
     for lag, t in inference['gp_pick']['ic']['newey_west_tstat'].items():
-        p = two_sided_p(t)
-        significance['newey_west'][lag] = dict(t=t, p=p, bonferroni={c: dict(m=counts[c], p=bonferroni(p, counts[c]))
+        p = _p(t)
+        significance['newey_west'][lag] = dict(t=t, p=p, bonferroni={c: dict(m=counts[c], p=_bonferroni(p, counts[c]))
                                                                       for c in plan['bonferroni_counts']})
-    significance['bonferroni_iid'] = {c: dict(m=counts[c], p=bonferroni(p_iid, counts[c])) for c in plan['bonferroni_counts']}
+    significance['bonferroni_iid'] = {c: dict(m=counts[c], p=_bonferroni(p_iid, counts[c])) for c in plan['bonferroni_counts']}
 
     gp_seeds, rs_seeds = _over_seeds(gp_rows), _over_seeds(rs_rows)
     seeds = dict(gp=gp_seeds, random_search=rs_seeds,
                  gp_minus_random={m: _welch(gp_seeds[m], rs_seeds[m]) for m in ('mean_ic', 'mean_net')})
-    for m, d in seeds['gp_minus_random'].items():
-        d['gp_beats_random'] = d['difference'] > 2 * d['standard_error']
 
     validation_ev = Evaluator(panel.head(ve + 1), config['evaluation']['delay'], config['evaluation']['fee_bps'])
     pick = parse(gp0['selected'])
