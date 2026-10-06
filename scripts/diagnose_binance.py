@@ -128,9 +128,8 @@ def main(argv=None):
     def constant_ic(scores):
         return [spearman(scores, labels[t]) for t in test]
 
-    val_ranks = [_unit_ranks(rows[t - delay]) for t in range(vs, ve) if rows[t - delay] is not None]
-    frozen = [mean([r[i] for r in val_ranks]) for i in range(n)]
-    beta_train = _betas(labels, market, range(ts, te), n)
+    frozen = frozen_ranking(rows, vs, ve, delay, n)
+    beta_train = train_betas(labels, market, ts, te, n)
     constant = dict(frozen_validation_rank=dict(rule="the pick's mean cross-sectional rank over validation, frozen",
                                                 ic=summary(constant_ic(frozen), plan),
                                                 scores={s: v for s, v in zip(symbols, frozen)}),
@@ -140,14 +139,6 @@ def main(argv=None):
     # 4. Neutralised IC: residualise the signal's ranks and the next-day returns, each day, on
     #    trailing beta and/or log dollar volume, using only data the signal could see (through t - delay).
     bw, sw = plan['beta_window'], plan['size_window']
-
-    def trailing_beta(t):
-        return _betas(labels, market, range(t - delay - bw, t - delay), n)   # intervals closing by close[t - delay]
-
-    def log_dollar_volume(t):
-        days = range(t - delay - sw + 1, t - delay + 1)
-        return [math.log(mean([close[d][i] * volume[d][i] for d in days])) for i in range(n)]
-
     refs = {name: ev.signal(parse(expr)) for name, expr in sorted(plan['neutralised_references'].items())}
     neutral = {k: [] for k in ('beta', 'size', 'beta_and_size')}
     ref_neutral = {name: [] for name in list(refs) + ['frozen_validation_rank']}
@@ -156,7 +147,7 @@ def main(argv=None):
         s = rows[t - delay]
         rk = ranks(s)
         raw.append(spearman(s, labels[t]))
-        beta, size = trailing_beta(t), log_dollar_volume(t)
+        beta, size = trailing_beta(labels, market, t, delay, bw, n), log_dollar_volume(close, volume, t, delay, sw, n)
         for k, cols in (('beta', [beta]), ('size', [size]), ('beta_and_size', [beta, size])):
             neutral[k].append(spearman(residualise(rk, cols), residualise(labels[t], cols)))
         # Reference rankings under the same beta-and-size neutralisation: is the residual a known effect?
@@ -212,6 +203,31 @@ def main(argv=None):
                      | dict(constant_ic={k: v['ic']['mean'] for k, v in constant.items()},
                             pick_gross_t=report['pick_gross']['tstat']), indent=1, sort_keys=True))
     return 0
+
+
+# The four control inputs below are module functions so tests/test_diagnose_timing.py can pin what each
+# may read: a window slid forward by one row inflates the "fixed tilt" and "survives neutralisation" numbers.
+
+def frozen_ranking(rows, vs, ve, delay, n):
+    """The pick's mean unit rank over the validation intervals [vs, ve): signal rows through ve - 1 - delay."""
+    val_ranks = [_unit_ranks(rows[t - delay]) for t in range(vs, ve) if rows[t - delay] is not None]
+    return [mean([r[i] for r in val_ranks]) for i in range(n)]
+
+
+def train_betas(labels, market, ts, te, n):
+    """Each coin's beta over the train intervals [ts, te): closes through close[te]."""
+    return _betas(labels, market, range(ts, te), n)
+
+
+def trailing_beta(labels, market, t, delay, window, n):
+    """Beta for the interval at t over the ``window`` intervals closing by close[t - delay], what the signal saw."""
+    return _betas(labels, market, range(t - delay - window, t - delay), n)
+
+
+def log_dollar_volume(close, volume, t, delay, window, n):
+    """Log mean dollar volume for the interval at t over the ``window`` days through t - delay."""
+    days = range(t - delay - window + 1, t - delay + 1)
+    return [math.log(mean([close[d][i] * volume[d][i] for d in days])) for i in range(n)]
 
 
 def _betas(labels, market, span, n):
