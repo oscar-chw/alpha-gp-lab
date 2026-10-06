@@ -117,16 +117,30 @@ def openrouter(prompt, post=http_post, timeout=120):
         # A two-line key file made http.client raise ValueError('Invalid header value b"Bearer <key>"'), unredacted.
         raise RuntimeError(f'{KEY_ENV} contains whitespace or control characters (a multi-line key file?); nothing was sent')
 
+    # An exception message can quote the key as a repr (backslash and quote escaped), as JSON or inside bytes, so
+    # matching only the literal key missed keys containing \\ or '.
+    forms = sorted({key, repr(key)[1:-1], json.dumps(key)[1:-1], repr(key.encode())[2:-1],
+                    key.encode('unicode_escape').decode()}, key=len, reverse=True)
+
+    def redact(text):
+        for form in forms:
+            text = text.replace(form, '[key]')
+        return text
+
     def refuse(why):
-        raise RuntimeError(f'OpenRouter {MODEL}: {why}'.replace(key, '[key]'))
+        raise RuntimeError(redact(f'OpenRouter {MODEL}: {why}'))
     body = json.dumps(dict(model=MODEL, messages=[dict(role='user', content=prompt)], temperature=0,
                            max_tokens=MAX_TOKENS, reasoning=REASONING)).encode()
+    failure = None
     try:
         status, raw = post(OPENROUTER_URL, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
                            body, timeout)
     except Exception as exc:
-        # Transport errors can quote the request headers; show a redacted message and drop the chained original.
-        raise RuntimeError(f'OpenRouter {MODEL}: request failed: {type(exc).__name__}: {exc}'.replace(key, '[key]')) from None
+        failure = redact(f'OpenRouter {MODEL}: request failed: {type(exc).__name__}: {exc}')
+    if failure is not None:
+        # Raised outside the except block: `from None` alone leaves the original, key-bearing exception reachable
+        # through __context__, so a traceback or a logger walking the chain could still show the key.
+        raise RuntimeError(failure)
     if len(raw) > MAX_BODY_BYTES:
         refuse(f'response body over {MAX_BODY_BYTES} bytes (HTTP {status})')
     try:

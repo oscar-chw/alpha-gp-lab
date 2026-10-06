@@ -198,6 +198,23 @@ class OpenRouter(unittest.TestCase):
             openrouter('PROMPT', post=post)
         self.assertNotIn(KEY, ''.join(traceback.format_exception(ctx.exception)))
 
+    def test_a_key_with_backslash_and_quote_is_in_no_chained_exception_or_repr(self):
+        """`from None` kept the key-bearing original in __context__, and the literal-key match missed escapes."""
+        tricky = "or-key\\9'x\"y-77"
+        def post(url, headers, body, timeout):
+            raise ValueError('Invalid header value %r' % headers['Authorization'].encode())
+        with mock.patch.dict(os.environ, {'OPENROUTER_API_KEY': tricky}):
+            with self.assertRaisesRegex(RuntimeError, r'request failed: ValueError') as ctx:
+                openrouter('PROMPT', post=post)
+        chain, exc = [], ctx.exception
+        while exc is not None:
+            chain.append(exc)
+            exc = exc.__cause__ or exc.__context__
+        self.assertEqual(len(chain), 1, 'the original exception must not stay reachable')
+        shown = ''.join(traceback.format_exception(ctx.exception)) + repr(ctx.exception) + str(ctx.exception)
+        for form in (tricky, repr(tricky)[1:-1], json.dumps(tricky)[1:-1], repr(tricky.encode())[2:-1], 'or-key'):
+            self.assertNotIn(form, shown)
+
     def test_missing_key_fails_loudly_before_any_request(self):
         for value in (None, '', '  \n'):
             with self.subTest(value=value), mock.patch.dict(os.environ):
