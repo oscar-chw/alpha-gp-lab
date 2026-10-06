@@ -7,7 +7,7 @@ from helpers import panel_for, perturbed, small_config
 from alpha_gp_lab.data import Panel
 from alpha_gp_lab.evaluate import Evaluator, score
 from alpha_gp_lab.gp import random_tree
-from alpha_gp_lab.grammar import parse
+from alpha_gp_lab.grammar import Node, parse
 
 
 class Evaluation(unittest.TestCase):
@@ -74,6 +74,24 @@ class Evaluation(unittest.TestCase):
         gross = [math.fsum(a * (close[t + 1][i] / close[t][i] - 1) for i, a in enumerate(w)) for t in range(3, 8)]
         for got, g, to in zip(m['net_series'], gross, want):
             self.assertAlmostEqual(got, g - 0.001 * to, places=12)
+
+    def test_overflow_and_non_finite_signals_are_degenerate_not_fatal(self):
+        """volume ** 32 is finite but (x - m) ** 2 overflows inside zscore, which raised OverflowError out of
+        the whole search; volume ** 64 - volume ** 64 is nan everywhere, which ranks arbitrarily."""
+        def power(k):
+            t = parse('volume')
+            for _ in range(k):
+                t = Node('mul', (t, t))
+            return t
+        ev = Evaluator(self.panel, 1, 5)
+        for tree in (Node('zscore', (power(5),)), Node('ts_corr', (power(5), parse('close')), window=5),
+                     Node('sub', (power(6), power(6))), Node('rank', (power(6),))):
+            with self.subTest(tree=str(tree)[:40]):
+                m = ev.metrics(tree, 20, 70)
+                self.assertIsNone(m['mean_ic'])
+                self.assertEqual(m['abstentions'], 50)
+                self.assertIsNone(score(m, tree, 0.02, 0.001))
+        self.assertIsNotNone(ev.metrics(power(2), 20, 70)['mean_ic'])   # volume ** 4 is finite: still scored
 
     def test_t_statistics_and_net_sum_match_the_statistics_module(self):
         m = Evaluator(self.panel, 1, 5).metrics(parse('-returns'), 20, 70, detail=True)

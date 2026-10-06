@@ -163,6 +163,25 @@ class Search(unittest.TestCase):
         self.assertFalse(report['llm']['used_as_seeds'])
         self.assertFalse(any(n['operation'] == 'llm_seed' for n in report['folds'][0]['nodes']))
 
+    def test_an_overflowing_candidate_is_rejected_and_the_run_completes(self):
+        """max_nodes accepts up to 128, so a seed or baseline can overflow a float; that rejects one expression."""
+        boom = 'volume'
+        for _ in range(5):
+            boom = f'({boom} * {boom})'
+        boom = f'zscore({boom})'   # volume ** 32 is finite, but (x - m) ** 2 inside zscore overflows
+        config = copy.deepcopy(self.config)
+        config['gp'].update(max_nodes=128, max_depth=10)
+        config['baselines'] = {'overflow': boom}
+        report, _, llm = run(config, response=boom + '\n-returns\n')
+        fold = report['folds'][0]
+        self.assertIn(str(parse(boom)), llm['accepted'])
+        self.assertEqual(fold['status'], 'SELECTED')
+        self.assertIsNone(fold['baselines']['overflow']['test']['mean_ic'])
+        seed = next(n for n in fold['nodes'] if n['operation'] == 'llm_seed' and n['expression'] == '-returns')
+        self.assertEqual(seed['generation'], 0)
+        self.assertNotIn(str(parse(boom)), {n['expression'] for n in fold['nodes']})
+        self.assertGreaterEqual(fold['counts']['rejected_degenerate'], 1)
+
     def test_walk_forward_folds_roll_and_stay_disjoint(self):
         config = copy.deepcopy(self.config)
         del config['splits']

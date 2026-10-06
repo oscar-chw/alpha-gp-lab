@@ -89,6 +89,9 @@ _WINDOW = {'ts_mean': lambda w: math.fsum(w) / len(w), 'ts_sum': math.fsum, 'ts_
            'ts_decay_linear': lambda w: math.fsum((i + 1) * x for i, x in enumerate(w)) / (len(w) * (len(w) + 1) / 2)}
 
 
+_KNOWN = {'neg', 'winsorize', *UNARY, *GROUP, *BINARY, *TS, *TS2}
+
+
 def _first(rows):
     return next((i for i, r in enumerate(rows) if r is not None), len(rows))
 
@@ -142,7 +145,24 @@ class Evaluator:
         if key in self._cache:
             self._cache.move_to_end(key)
             return self._cache[key]
+        if node.op not in _KNOWN:
+            raise ValueError('unknown operator ' + node.op)
         args = [self.signal(c) for c in node.args]
+        try:
+            out = self._apply(node, args)
+            # inf from overflow, or nan from inf - inf, would be ranked arbitrarily: no row of this signal is usable.
+            if any(r is not None and not all(map(math.isfinite, r)) for r in out):
+                out = [None] * len(self.panel.dates)
+        except (OverflowError, ValueError):
+            # Float overflow inside an operator ((x - m) ** 2, fsum of huge values) used to abort the whole run;
+            # now it rejects this one expression, which abstains everywhere and so scores as degenerate.
+            out = [None] * len(self.panel.dates)
+        self._cache[key] = out
+        if len(self._cache) > self._cache_size:
+            self._cache.popitem(last=False)
+        return out
+
+    def _apply(self, node, args):
         op = node.op
         if op == 'neg':
             out = [None if r is None else [-x for x in r] for r in args[0]]
@@ -167,13 +187,8 @@ class Evaluator:
             out = [None if x is None or y is None else [fn(u, v) for u, v in zip(x, y)] for x, y in zip(*args)]
         elif op in TS:
             out = _timeseries(args[0], op, node.window)
-        elif op in TS2:
-            out = _ts_corr(args[0], args[1], node.window)
         else:
-            raise ValueError('unknown operator ' + op)
-        self._cache[key] = out
-        if len(self._cache) > self._cache_size:
-            self._cache.popitem(last=False)
+            out = _ts_corr(args[0], args[1], node.window)
         return out
 
     def _check(self, start, end):
