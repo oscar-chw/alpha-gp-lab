@@ -14,7 +14,7 @@ and where each kind of evidence lives. The results themselves are in [results.md
 - The follow-up plan (`fixtures/binance_analysis_config.json`, `scripts/analyze_binance.py`) was
   committed after the main test result; the diagnostics are POST-HOC. See the timeline below.
 
-Ten real-data commands so far, all listed with their code version and exit code in
+Ten real-data commands before the 2026-10-06 amendment, all listed with their code version and exit code in
 [real-data-runs.md](real-data-runs.md#every-real-data-run): `verify-data`, one failed
 live LLM call, three main runs and two walk-forward runs (repeats only added printed fields and
 reproduced every earlier number), the follow-up analysis and two runs of the post-hoc diagnostics
@@ -22,6 +22,14 @@ reproduced every earlier number), the follow-up analysis and two runs of the pos
 one main GP seed were pre-registered; no pre-registered config, seed or threshold was changed after
 a real-data result. The post-hoc diagnostics config was extended once after its first real-data
 run (round 2: two neutralised reference rankings, 5 to 7 looks).
+
+**Amendment, 2026-10-06.** A code review found the evaluator charged turnover against yesterday's
+target weights rather than the book after the day's returns, understating costs. The cost model
+was corrected in `60b9ffa` and every real-data result regenerated with the repo's commands (runs 11
+to 19 in [real-data-runs.md](real-data-runs.md#every-real-data-run)). No pre-registered config, seed or
+threshold changed: `fixtures/binance_daily_config.json` keeps SHA-256 `7d14404a…`. The changed
+figures, the two conclusions that changed and why are in
+[results.md](results.md#amendment-2026-10-06-costs-charged-on-the-drifted-book).
 
 ## Timeline: what each plan could have seen
 

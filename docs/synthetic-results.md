@@ -3,7 +3,10 @@
 The three SYNTHETIC runs: the regime-change demo, its no-seeds ablation and a four-regime
 walk-forward. The real-data results are in [results.md](results.md).
 
-All results on this page are **SYNTHETIC**, with 5 bps per unit of turnover.
+All results on this page are **SYNTHETIC**, with 5 bps per unit of turnover, rerun on 2026-10-06
+after the cost amendment ([results.md](results.md#amendment-2026-10-06-costs-charged-on-the-drifted-book)):
+the demo's net figures moved in the fourth digit, the ablation chose a different expression, and
+the walk-forward is unchanged.
 
 ## 1. Demo: a regime change between validation and test (negative result)
 
@@ -21,9 +24,9 @@ no existing alphas.
 | selected | `group_neutralize(-returns, industry)` |
 | selected_origin | `llm_seed`, generation 0 (the hand-written fixture) |
 | validation mean_ic | 0.133 (ic_tstat 6.937, 58 intervals) |
-| validation mean_turnover / mean_net | 1.341 / 0.001962 |
+| validation mean_turnover / mean_net | 1.341 / 0.001961 |
 | **test mean_ic** | **-0.1877** (ic_tstat -11.44, 59 intervals) |
-| **test mean_net** | **-0.004342** (mean_turnover 1.321) |
+| **test mean_net** | **-0.004343** (mean_turnover 1.323) |
 | occurrences / unique_expressions | 640 / 473 |
 | rejected: duplicate / equivalent / degenerate / limits | 115 / 54 / 22 / 16 |
 | correlation_rejected | 15 (shortlist: 1) |
@@ -44,15 +47,17 @@ Command: `PYTHONPATH=src python3.11 -m alpha_gp_lab run --config fixtures/demo_n
 
 | Field (printed) | Value |
 |---|---|
-| selected | `ts_rank(-returns, 20)` |
-| selected_origin | `crossover`, generation 4 |
-| validation mean_ic | 0.1413 (ic_tstat 5.774) |
-| test mean_ic | -0.153 (ic_tstat -7.127) |
-| test mean_net | -0.003722 |
-| occurrences / unique_expressions | 640 / 470 |
+| selected | `group_neutralize(-returns, industry)` |
+| selected_origin | `crossover`, generation 3 |
+| validation mean_ic | 0.133 (ic_tstat 6.937) |
+| test mean_ic | -0.1877 (ic_tstat -11.44) |
+| test mean_net | -0.004343 |
+| occurrences / unique_expressions | 640 / 491 |
 
-Without seeds the GP found a reversal expression on its own, with a validation IC close to
-the seeded run's, and it failed on the adverse test period in the same way. So the seeded
+Without seeds the GP bred the seeded run's pick, `group_neutralize(-returns, industry)`, on its
+own by generation 3, so it scored the same and failed on the adverse test period in the same way.
+(Before the cost amendment the unseeded run picked `ts_rank(-returns, 20)`, validation IC 0.1413,
+test IC -0.153.) So the seeded
 win in the demo shows that the plumbing works. It is not evidence that an LLM helps: the
 fixture is hand-written and no real LLM has been run.
 

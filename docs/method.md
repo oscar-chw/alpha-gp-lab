@@ -16,8 +16,12 @@ semantics are local definitions written down in `src/alpha_gp_lab/evaluate.py`.
 `close[t+1]`; its signal is the expression's row at `t - delay` (delay 1 in every run here).
 Each day the signal's cross-sectional ranks are centred and scaled to a dollar-neutral,
 unit-gross portfolio. Per split the evaluator reports mean rank IC (Spearman, average ties),
-its t-statistic, mean daily turnover (`sum |w_t - w_{t-1}|`, between 0 and 2), and mean
-gross and net interval return (net = gross - `fee_bps` x turnover). A constant signal
+its t-statistic, mean daily turnover, and mean gross and net interval return (net = gross -
+`fee_bps` x turnover). Turnover is `sum |w_t - w_{t-1} (1 + r_{t-1})|`: the trade from yesterday's
+book, as interval t-1's returns left it, to today's target; the book is unit gross each day and P&L
+goes to cash. Until the 2026-10-06 amendment it was `sum |w_t - w_{t-1}|`, which missed the trade
+back to target and overstated net ([results.md](results.md#amendment-2026-10-06-costs-charged-on-the-drifted-book)).
+A signal whose values overflow or turn non-finite abstains everywhere, so it scores as degenerate. A constant signal
 abstains into cash.
 
 **Genetic programming** (`src/alpha_gp_lab/gp.py`), with the budget set by config:
@@ -33,7 +37,8 @@ The generation loop with the main run's budget (population 64, 10 generations, h
 is drawn in [DIAGRAMS.md, diagram 3](DIAGRAMS.md#3-the-gp-generation-loop).
 
 **Splits.** A config gives index spans or ISO-date spans (`["2024-01-01", "2024-12-31"]`
-resolves to the first and last panel dates inside it), as one fold, an explicit list of folds,
+resolves to the first and last panel dates inside it; a span reaching outside the panel's dates is
+refused, never clipped), as one fold, an explicit list of folds,
 or a rolling `walk_forward` in days.
 
 **Split roles.**

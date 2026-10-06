@@ -43,6 +43,8 @@ python3.11 scripts/diagnose_binance.py --config fixtures/binance_diagnostics_con
 "$PORTFOLIO_VENV/bin/python" scripts/plot_binance.py   # writes docs/figures/*.png
 ```
 
+`check.sh` and `demo.sh` run `$PYTHON` if set, else `$PORTFOLIO_VENV/bin/python`, else `python3.11`
+(`scripts/env.sh`); a named interpreter that does not exist stops them with exit 3.
 `check.sh` runs `verify-data` and re-runs the main real-data config against
 `results/binance_daily_main.json` when `data/binance-daily/` exists, and prints a skip message
 when it does not. `seeds --live --config <config>` refreshes a replay entry with one request to
@@ -51,10 +53,11 @@ the pinned OpenRouter model; it needs `OPENROUTER_API_KEY` (or the file
 
 ## Tests and runtime
 
-- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 121 tests` and `OK`.
+- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 137 tests` and `OK`.
 - `python3.11 tests/hand_cases.py` re-derives the evaluator's arithmetic in exact Fractions:
-  for example IC 2/5, turnover 2, gross 1/20 and net 49/1000 on a four-asset case.
-- On the development machine the demo printed `demo finished in 9.6s` to stderr on its last run, and
+  for example IC 2/5, turnover 323/48 (from the drifted book; 2 between the two targets), gross
+  1/20 and net 4477/96000 on a four-asset case.
+- On the development machine the demo printed `demo finished in 10.9s` to stderr on 2026-10-06, and
   `scripts/check.sh` (tests, hand cases, `scripts/demo.sh`, the other two runs in [synthetic-results.md](synthetic-results.md), two replays, then
   `verify-data` and the main real-data run when the data is present) exited 0 both with and
   without `data/binance-daily/`. Runtime varies by machine.

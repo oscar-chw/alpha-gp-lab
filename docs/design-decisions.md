@@ -20,8 +20,8 @@ Why the lab is built the way it is, and what each choice costs.
   signal whose validation net was negative.
 - **A grammar without units, so far.** Any field may meet any operator, which keeps the search
   space simple but lets raw price and volume levels be compared across coins. In a 34-coin
-  universe these act as size proxies: 6 of the 20 GP seed picks, 4 of the 20 random-search picks
-  and walk-forward fold 3 rank partly by them
+  universe these act as size proxies: 7 of the 20 GP seed picks, 4 of the 20 random-search picks
+  and walk-forward folds 1 and 3 rank partly by them
   ([command](real-data-runs.md#picks-that-rank-raw-price-or-volume-levels)). The fix,
   `gp.unit_check`, exists but stays off for the spent window; switching it on is for the next one.
 - **Random search shares the GP's filter and validation rule.** The control differs from the GP

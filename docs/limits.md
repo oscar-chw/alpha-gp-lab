@@ -16,18 +16,21 @@ Every known limit of the method and the results. The README lists the six that m
   has had at least 176 looks (see [results.md](results.md#summary) for what is not counted). The follow-up plan was committed 19 minutes after the main test
   result and the diagnostics after a reviewer's probes, so neither was blind to it. Repeated looks
   at one window weaken it as out-of-sample evidence, and the window is one draw of a market in
-  which the daily-rebalanced equal-weight 34-coin basket fell 65.8%.
+  which the daily-rebalanced equal-weight 34-coin basket fell 65.8%. The 2026-10-06 cost amendment
+  re-scored the window once more (every run regenerated); those looks are not in the 176.
 - **One venue.** Binance spot prices and volumes only, with no cross-check against other
   exchanges.
 - **Daily bars.** UTC close-to-close days. Delay 1 means a signal uses data through the close of
   day t-1 and is held from the close of day t to the close of day t+1, so anything faster than a
   day is invisible and the "1-day reversal" baseline skips a day before trading.
 - **Cost model.** A linear fee on traded notional: 10 bps per side on the real data (a round trip
-  costs 20 bps), 5 bps per side on the synthetic data. No spread, slippage, market impact, fee
+  costs 20 bps), 5 bps per side on the synthetic data, charged on the trade from the drifted book
+  to the new target (until the 2026-10-06 amendment it was charged against yesterday's target,
+  which understated costs; see [results.md](results.md#amendment-2026-10-06-costs-charged-on-the-drifted-book)). No spread, slippage, market impact, fee
   tiers or capacity limit.
 - **No shorting constraints or funding costs.** The portfolio is dollar-neutral, so half of it is
   short spot coins. Shorting spot needs margin borrowing or perpetual futures; borrow rates,
-  borrow availability and funding payments are not modelled. A borrow cost above 5.88% a year
+  borrow availability and funding payments are not modelled. A borrow cost above 5.11% a year
   wipes out the pick's test net.
 - **Single-name tails.** A 34-name equal-rank book is exposed to one coin's squeeze: ZEC's
   +1,357% in the short leg outweighed the whole test gross. Rank IC does not see this.
@@ -42,14 +45,15 @@ Every known limit of the method and the results. The README lists the six that m
   adds Newey-West t-statistics, block-bootstrap intervals and a Bonferroni bound over the 176 counted
   looks at the test window, for the main pick only. No White Reality Check or SPA test has been run over
   those looks, and none of these corrections handles a single-window market tilt.
-- **The GP adds little here.** On this data an equal-budget random search matches it on test IC,
-  and a one-line range measure matches its pick. What remains is mostly a fixed tilt (frozen ranking
+- **The GP adds little here.** On this data an equal-budget random search matches it on test IC
+  and, since the cost amendment, on test net, and a one-line range measure matches its pick. What remains is mostly a fixed tilt (frozen ranking
   87%, constant low-beta ranking 81%; 60% survives beta and size neutralisation); the main
   evidence is about that, not about genetic programming.
 - **The grammar has no units in the recorded runs.** Raw price and volume levels can be ranked
-  across coins, where they act as size proxies (6 of 20 GP seed picks, 4 of 20 random-search
-  picks, walk-forward fold 3). Proposed fix, implemented but off: `gp.unit_check`, with
-  `selection.min_coverage` for candidates defined on few days (walk-forward fold 1). Results under
+  across coins, where they act as size proxies (7 of 20 GP seed picks, 4 of 20 random-search
+  picks, walk-forward folds 1 and 3, which both pick `-volume`). Proposed fix, implemented but off:
+  `gp.unit_check`, with `selection.min_coverage` for candidates defined on few days (walk-forward
+  fold 1 before the cost amendment). Results under
   either must come from a window after 2026-08-31, which needs new data.
 - **No real LLM output.** The only replay entry is hand-written by someone who knew the
   synthetic generator, and the one live attempt failed. On real data an LLM's prior knowledge
