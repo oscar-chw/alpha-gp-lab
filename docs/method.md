@@ -45,7 +45,7 @@ or a rolling `walk_forward` in days.
 - *Train* fitness drives tournaments, elitism and the hall of fame (best train score per
   distinct signal).
 - *Validation* re-scores the hall of fame, keeps candidates with IC >= `min_ic` and turnover
-  <= `max_turnover`, ranks them by the same penalised fitness, and builds a shortlist with a
+  <= `max_turnover` (any value from 0 up: drifted-book turnover can exceed 2, so 2 is no longer "no limit"), ranks them by the same penalised fitness, and builds a shortlist with a
   correlation filter: a candidate is rejected if its mean cross-sectional signal correlation
   exceeds `max_corr` with an already-selected alpha, meaning one listed in the config's
   `existing_alphas` (alphas chosen before this run) or one already on the shortlist. The top

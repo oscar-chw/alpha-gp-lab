@@ -171,7 +171,9 @@ def validate(config):
     if 'min_coverage' in sel:
         _num(sel['min_coverage'], 0, 1, 'selection.min_coverage')
     _num(sel['min_ic'], -1, 1, 'selection.min_ic')
-    _num(sel['max_turnover'], 0, 2, 'selection.max_turnover')
+    # Turnover is measured on the drifted book (2026-10-06 amendment) and can exceed 2 (the hand case is about 6.7),
+    # so the old cap of 2 no longer meant "no limit"; any non-negative value is accepted.
+    _num(sel['max_turnover'], 0, math.inf, 'selection.max_turnover')
     _num(sel['max_corr'], 0, 1, 'selection.max_corr')
     _int(sel['select_k'], 1, 50, 'selection.select_k')
     if not isinstance(sel['existing_alphas'], list) or len(sel['existing_alphas']) > 50:

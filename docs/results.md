@@ -47,6 +47,11 @@ picks (was 6) rank raw price or volume levels, and none of the 20 is plain negat
 volatility (was 2). Test IC, the main pick, the diagnostics' decomposition of the IC and the
 "no significant return before or after costs" verdict are unchanged.
 
+The validator used to cap `selection.max_turnover` at 2, which was once the most turnover a book could
+show. On the drifted book it can exceed 2 (about 6.7 in the hand case), so the cap is removed: any
+value of 0 or more is accepted. The pre-registered `max_turnover` of 1.0 keeps its meaning (a real
+limit, as before) and the file is untouched.
+
 The reviewer's scratch estimate (test net 0.68 bps/day, break-even about 4.99%) used a variant that
 also scales the new target by the day's P&L; the committed code keeps unit gross each day, which
 matches the additive daily returns reported everywhere, and gives 0.70 bps/day and 5.11%.

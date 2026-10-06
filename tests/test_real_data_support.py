@@ -47,6 +47,18 @@ class DateFolds(unittest.TestCase):
         (fold,) = folds(self.config, gappy)
         self.assertEqual(fold, {'train': [0, 29], 'validation': [30, 57], 'test': [58, 117]})
 
+    def test_max_turnover_above_two_is_accepted_but_negative_and_non_finite_are_not(self):
+        """Drifted-book turnover can exceed 2 (about 6.7 in the hand case), so a cap of 2 was not 'no limit'."""
+        for value in (1.0, 2.5, 7, 1000):
+            config = copy.deepcopy(self.config)
+            config['selection']['max_turnover'] = value
+            validate(config)
+        for value in (-0.1, float('nan'), float('inf'), '3'):
+            config = copy.deepcopy(self.config)
+            config['selection']['max_turnover'] = value
+            with self.assertRaisesRegex(ValueError, 'selection.max_turnover'):
+                validate(config)
+
     def test_date_spans_outside_the_panel_are_refused_not_clamped(self):
         """A test end after the last date used to resolve to the last date: a shorter test window under the same name."""
         for name, span in (('train', ['2023-06-01', '2024-01-31']), ('test', ['2024-03-01', '2029-12-31']),
