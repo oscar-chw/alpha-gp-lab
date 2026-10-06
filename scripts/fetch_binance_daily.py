@@ -30,6 +30,7 @@ BASE = 'https://data.binance.vision/data/spot'
 _SYMBOL = re.compile(r'^[A-Z0-9]{2,20}$')
 _MONTH = re.compile(r'^\d{4}-(0[1-9]|1[0-2])$')
 _DAY = re.compile(r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$')
+TIMEOUT_SECONDS = 60
 
 
 def archive_url(symbol, period, interval='1d'):
@@ -88,8 +89,9 @@ def months(start, end):
     return out
 
 
-def fetch(url, opener=urllib.request.urlopen):
-    with opener(url) as response:
+def fetch(url, opener=urllib.request.urlopen, timeout=TIMEOUT_SECONDS):
+    # Without a timeout one stalled request out of ~2,700 blocked the whole download with no error.
+    with opener(url, timeout=timeout) as response:
         return response.read()
 
 

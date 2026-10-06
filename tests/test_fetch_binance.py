@@ -2,7 +2,9 @@
 import hashlib
 import importlib.util
 import io
+import socket
 import tempfile
+import time
 import unittest
 import zipfile
 from pathlib import Path
@@ -24,10 +26,11 @@ def archive(name, csv_text):
 
 class FakeOpener:
     def __init__(self, files):
-        self.files, self.urls = files, []
+        self.files, self.urls, self.timeouts = files, [], []
 
-    def __call__(self, url):
+    def __call__(self, url, timeout=None):
         self.urls.append(url)
+        self.timeouts.append(timeout)
         return io.BytesIO(self.files[url])
 
 
@@ -83,6 +86,7 @@ class FetchScript(unittest.TestCase):
             for symbol in ('BTCUSDT', 'ETHUSDT'):
                 fetch.download_symbol(symbol, ['2024-01'], tmp, opener)
             self.assertTrue(all('data.binance.vision' in u for u in opener.urls))
+            self.assertEqual(set(opener.timeouts), {60})   # every archive and .CHECKSUM request is bounded
             panel, dropped = load_csv_dir(tmp)
             self.assertEqual(panel.dates, ('2024-01-01', '2024-01-02'))
             self.assertEqual(panel.bars['close'][1], [108.0, 21.5])
@@ -91,6 +95,16 @@ class FetchScript(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'mismatch'):
                 fetch.download_symbol('BTCUSDT', ['2024-01'], out, FakeOpener(bad))
             self.assertFalse(out.exists())
+
+    def test_a_stalled_server_times_out_instead_of_hanging(self):
+        """A server that accepts the connection and never answers: the real urlopen must give up."""
+        with socket.socket() as server:
+            server.bind(('127.0.0.1', 0))
+            server.listen(1)
+            started = time.monotonic()
+            with self.assertRaises(OSError):   # socket timeout, possibly wrapped in URLError
+                fetch.fetch(f'http://127.0.0.1:{server.getsockname()[1]}/x.zip', timeout=0.5)
+            self.assertLess(time.monotonic() - started, 10)
 
 
 if __name__ == '__main__':
