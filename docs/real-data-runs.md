@@ -23,16 +23,18 @@ relative to the results it could have seen is in [evidence.md](evidence.md#timel
 | 12 | `run` walk-forward config, same | working tree, edited during the run | 1 | the run's closing self-replay refused the changed code identity; output discarded |
 | 13 | `scripts/analyze_binance.py`, same | `60b9ffa` (working tree) | 0 | byte-identical to run 17 |
 | 14 | `scripts/diagnose_binance.py`, same | working tree | 0 | byte-identical to run 18 |
-| 15 | `run` main config | `a86a5ca` | 0 | committed as `results/binance_daily_main.json` |
-| 16 | `run` walk-forward config | `a86a5ca` | 0 | committed as `results/binance_walkforward.json` |
-| 17 | `scripts/analyze_binance.py` | `a86a5ca` | 0 | committed as `results/binance_analysis.json` |
-| 18 | `scripts/diagnose_binance.py` | `a86a5ca` | 0 | committed as `results/binance_diagnostics.json` |
+| 15 | `run` main config | `60b9ffa` (working tree) | 0 | committed as `results/binance_daily_main.json` in `60b9ffa` |
+| 16 | `run` walk-forward config | `60b9ffa` (working tree) | 0 | committed as `results/binance_walkforward.json` in `60b9ffa` |
+| 17 | `scripts/analyze_binance.py` | `60b9ffa` (working tree) | 0 | committed as `results/binance_analysis.json` in `60b9ffa` |
+| 18 | `scripts/diagnose_binance.py` | `60b9ffa` (working tree) | 0 | committed as `results/binance_diagnostics.json` in `60b9ffa` |
 | 19 | `run` walk-forward config | `60b9ffa` | 0 | byte-identical to run 16: the later robustness fixes change no number |
 
 Runs 11 to 19 regenerate every result under the corrected cost model of the 2026-10-06 amendment
 ([results.md](results.md#amendment-2026-10-06-costs-charged-on-the-drifted-book)); the main config
-and every follow-up plan are unchanged, and runs 15 to 18 used the code of `a86a5ca`, which adds
-only robustness fixes to the cost-model commit `60b9ffa` (run 19 checks that they change no number).
+and every follow-up plan are unchanged, and runs 15 to 18 were working-tree runs, made before the robustness-fix commits `cd2b338` to `a86a5ca`
+existed: `git log` shows every `results/*.json` and the figure committed in `60b9ffa` (18:07:33), before
+`a86a5ca` (18:08:05). Those later commits add only robustness fixes to the cost-model commit `60b9ffa`;
+run 19 checks that they change no number.
 `scripts/plot_binance.py` redrew the figures from run 17. Before that, runs 4 to 7 were repeated only to print more statistics (`net_tstat`, then `mean_gross` and
 `valid_ic_intervals`); every number that existed before was reproduced exactly, and the selection
 does not read the added fields. Each `run` also replays itself once inside `verify`, and
