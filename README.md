@@ -88,6 +88,7 @@ style of Kakushadze, "101 Formulaic Alphas", 2016) is cheap; honest evaluation i
 allowed to look at the data it is judged on will always find something, and an LLM asked for
 "good alphas" adds a second, unaudited source of ideas. This lab asks what a
 search finds when it may only breed on train, choose on validation and accept one test score, and
+whether that survives a regime change.
 
 ## Approach
 

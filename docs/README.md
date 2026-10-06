@@ -7,6 +7,7 @@ Start with the [project README](../README.md); every page below answers one ques
 | Page | What it answers |
 |---|---|
 | [method.md](method.md) | How does the search work: grammar, timing, GP loop, split roles, controls, run bundle? |
+| [design-decisions.md](design-decisions.md) | Why is it built this way, and what does each choice cost? |
 | [architecture.md](architecture.md) | Which module does what, and what does the append-only lineage record hold? |
 | [DIAGRAMS.md](DIAGRAMS.md) | All five diagrams, numbered: overview, split roles, GP loop, LLM seed path, result flow |
 | [llm-seeds.md](llm-seeds.md) | How are LLM seeds requested, cached and refused, and why has none run on real data? |

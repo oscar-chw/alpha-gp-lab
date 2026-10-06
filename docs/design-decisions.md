@@ -2,13 +2,6 @@
 
 Why the lab is built the way it is, and what each choice costs.
 
-
-published, so this companion runs the same discipline on Binance daily data.
-
-  and selection on validation, never on the final test.
-- *Different here:* genetic programming instead of template enumeration; train, validation and
-  test roles fixed in committed configs before any real-data run; an equal-budget random search as
-
 ## Decisions
 
 - **Parse, never `eval`.** LLM text and offspring go through the same `ast`-based parser, so a
