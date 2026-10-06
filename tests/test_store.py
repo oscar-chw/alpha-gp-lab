@@ -106,6 +106,18 @@ class Bundles(unittest.TestCase):
             store.run(canonical(other), self.panel, self.llm, self.tmp / 'mismatch')
         self.assertFalse((self.tmp / 'mismatch').exists())
 
+    def test_a_split_error_leaves_no_run_directory(self):
+        """Splits past the panel used to fail after five members and the schema were written, so every
+        later run to the same --out was refused as interrupted."""
+        config = copy.deepcopy(self.config)
+        config['splits']['test'] = [96, len(self.panel.dates)]
+        raw, out = canonical(config), self.tmp / 'bad-split'
+        with self.assertRaisesRegex(ValueError, 'past the last date'):
+            store.run(raw, self.panel, self.llm, out)
+        self.assertFalse(out.exists())
+        store.run(self.raw, self.panel, self.llm, out)   # the same --out is usable at once
+        store.verify(out)
+
     def test_interrupted_run_is_kept_and_refused(self):
         out = self.tmp / 'interrupted'
         with self.assertRaises(InterruptedError):

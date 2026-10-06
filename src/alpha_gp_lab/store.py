@@ -14,7 +14,7 @@ import platform
 import sqlite3
 import sys
 
-from .config import canonical, digest, read_json, validate
+from .config import canonical, digest, folds, read_json, validate
 from .data import Panel, synthetic_from_config
 from .gp import compute_report
 from .llm_seed import check_record
@@ -127,6 +127,7 @@ def run(config_raw, panel, llm, out, *, _interrupt_after_generation=None):
         if read_json((out / 'identity.json').read_bytes()) != identity:
             raise ValueError('conflicting run identity: use a fresh output directory')
         return report
+    folds(config, panel.dates)   # a split error must refuse before any member exists, not leave an "interrupted" run
     out.mkdir(parents=True)
     for name, raw in (('config.json', config_raw), ('panel.json', panel_raw), ('llm.json', llm_raw),
                       ('code.json', canonical(code)), ('identity.json', canonical(identity))):
