@@ -243,8 +243,8 @@ whenever the data is present.
 ```mermaid
 flowchart TB
     subgraph CFGS["Committed configs"]
-        MAINC[("daily + walkforward<br/>configs, fe6220a")]
-        ANC[("analysis config<br/>76157af")]
+        MAINC[("daily + walkforward<br/>configs, 4f9c276")]
+        ANC[("analysis config<br/>405e288")]
         DIC[("diagnostics config<br/>POST-HOC")]
     end
     RUN["python3.11 -m<br/>alpha_gp_lab run"]

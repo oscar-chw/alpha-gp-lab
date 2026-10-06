@@ -44,7 +44,7 @@ CSV). `PYTHONPATH=src python3.11 -m alpha_gp_lab verify-data` prints `"ok": true
 the local copy. The CSVs are not in the repository.
 
 *Pre-registered setup.* `fixtures/binance_daily_config.json` and
-`fixtures/binance_walkforward_config.json` were committed in `fe6220a`, before any GP or baseline
+`fixtures/binance_walkforward_config.json` were committed in `4f9c276`, before any GP or baseline
 was run on the real data, and were not changed afterwards (commit timeline and hash map in
 [evidence.md](evidence.md)). The configs fix:
 - train 2020-01-01 to 2023-12-31, validation 2024, test 2025-01-01 to 2026-08-31 (607 daily
@@ -165,8 +165,8 @@ that, and spread and slippage on the short leg come on top.
 ## Follow-up analyses (pre-registered after the main result)
 
 Plan: `fixtures/binance_analysis_config.json` and `scripts/analyze_binance.py`, committed in
-`76157af` at 18:15:39, before either was run on real data but **19 minutes after the main test
-results were committed** (`74c2f81`, 17:56:41). Its seeds, budget, bootstrap and decision rules
+`405e288` at 18:15:39, before either was run on real data but **19 minutes after the main test
+results were committed** (`8306c42`, 17:56:41). Its seeds, budget, bootstrap and decision rules
 were fixed before it ran, but it was written knowing the pick and its test score; in particular
 the range control was chosen because the pick looked like a range measure
 ([timeline](evidence.md#timeline-what-each-plan-could-have-seen)). Command (run once,

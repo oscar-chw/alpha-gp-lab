@@ -6,7 +6,7 @@ and where each kind of evidence lives. The results themselves are in [results.md
 ## Pre-registration
 
 - `fixtures/binance_daily_config.json` and `fixtures/binance_walkforward_config.json` were
-  committed in `fe6220a`, before any GP or baseline was run on the real data, and were not changed
+  committed in `4f9c276`, before any GP or baseline was run on the real data, and were not changed
   afterwards. What they fix is listed in [results.md](results.md#universe-data-and-pre-registered-setup).
 - The seeded config `fixtures/binance_daily_seeded_config.json` was pre-registered in the same
   commit and has not been run; the proposer-model change of 2026-10-05 is recorded in
@@ -29,13 +29,13 @@ run (round 2: two neutralised reference rankings, 5 to 7 looks).
 
 | Commit | Time | What |
 |---|---|---|
-| `fe6220a` | 17:37:30 | main and walk-forward configs pre-registered, before any real-data run |
-| `74c2f81` | 17:56:41 | main-run and walk-forward test results committed |
-| `76157af` | 18:15:39 | follow-up plan (random search, seeds, bootstrap, range control) committed, 19 minutes **after** the main test result |
-| `fb0471c` | 18:21:48 | follow-up results committed |
-| `66e346b` | 18:53:44 | post-hoc diagnostics script committed, after a reviewer had probed the test window |
-| `fac5a43` | 18:54:13 | post-hoc diagnostics results committed |
-| `ea86db2` | 19:16:29 | two more post-hoc diagnostics (up/down t, neutralised reference rankings) committed before running, after a second review |
+| `4f9c276` | 17:37:30 | main and walk-forward configs pre-registered, before any real-data run |
+| `8306c42` | 17:56:41 | main-run and walk-forward test results committed |
+| `405e288` | 18:15:39 | follow-up plan (random search, seeds, bootstrap, range control) committed, 19 minutes **after** the main test result |
+| `bd83e14` | 18:21:48 | follow-up results committed |
+| `00c3cbe` | 18:53:44 | post-hoc diagnostics script committed, after a reviewer had probed the test window |
+| `11d06ff` | 18:54:13 | post-hoc diagnostics results committed |
+| `482f022` | 19:16:29 | two more post-hoc diagnostics (up/down t, neutralised reference rankings) committed before running, after a second review |
 
 So the follow-up plan fixed its seeds, budget, decision rules and bootstrap before it ran, but it
 was written knowing the main pick and its test score. In particular the range control was chosen
@@ -66,4 +66,4 @@ is present. Drawn in [DIAGRAMS.md](DIAGRAMS.md#5-how-a-result-reaches-the-readme
 - Model: the public API responses behind the pinned seed model are committed in
   [model-evidence/](model-evidence/README.md).
 - CI: `.github/workflows/ci.yml` runs `scripts/check.sh` on Python 3.11 (passed on main at
-  `0199e6c`, 2026-10-04; the real-data steps skip there).
+  `11666ad`, 2026-10-04; the real-data steps skip there).
