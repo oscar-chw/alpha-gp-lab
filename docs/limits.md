@@ -10,8 +10,8 @@ Every known limit of the method and the results. The README lists the six that m
   download.
 - **The test window is not an untouched holdout.** 2025-01-01 to 2026-08-31 was scored by the main
   run and then again by this repo's follow-up analysis (20 GP and 20 random-search seeds, the
-  range-factor control, the bootstrap and the comparisons in [results.md](results.md)). Across the portfolio, the sibling
-  repo asof-research ran its own pre-registered study on the same 34 pairs, splits, costs and
+  range-factor control, the bootstrap and the comparisons in [results.md](results.md)). Across the portfolio, the point-in-time
+  research platform ([agentic-quant-research/platform](https://github.com/oscar-chw/agentic-quant-research/tree/main/platform), formerly asof-research) ran its own pre-registered study on the same 34 pairs, splits, costs and
   baselines, committed shortly after this repo's real-data results. Counted together, the window
   has had at least 176 looks (see [results.md](results.md#summary) for what is not counted). The follow-up plan was committed 19 minutes after the main test
   result and the diagnostics after a reviewer's probes, so neither was blind to it. Repeated looks

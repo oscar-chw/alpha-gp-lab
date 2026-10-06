@@ -272,7 +272,7 @@ random search scores 640 distinct expressions to the GP's 492, which slightly fa
   `fixtures/binance_diagnostics_config.json`: 3 in the main run (pick and 2 baselines), 40 in the
   follow-up (19 more GP seeds, 20 random-search seeds, the range control), 6 from walk-forward
   folds 2 and 3 (sub-windows of this one), 7 post-hoc diagnostics, and the 120 grid hypotheses of
-  the sibling repo asof-research on the same pairs and window: **176 looks**. Bonferroni over 176
+  the point-in-time research platform (agentic-quant-research/platform, formerly asof-research) on the same pairs and window: **176 looks**. Bonferroni over 176
   (two-sided normal p; `test_window_looks`): the pick's raw test IC gives 2.10e-10 (i.i.d. t) and
   5.24e-12 (Newey-West t); the neutralised ICs give 6.64e-7 (beta), 1.28e-10 (size) and 8.20e-6
   (beta and size). The net was never significant, so there is nothing to correct there. Bonferroni
