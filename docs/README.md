@@ -22,7 +22,6 @@ Start with the [project README](../README.md); every page below answers one ques
 | [evidence.md](evidence.md) | What was committed before which result, and how do the commit hashes map? |
 | [limits.md](limits.md) | What can these results not tell you? Every known limit |
 | [model-evidence/README.md](model-evidence/README.md) | Where do the pinned seed model's facts come from? |
-| [commit-hash-map.txt](commit-hash-map.txt) | Old to new commit hashes after the 2026-10-04 re-attribution |
 
 ## Reference
 

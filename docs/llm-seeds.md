@@ -35,10 +35,10 @@ duplicate and three invalid lines. It is used by the SYNTHETIC demo only.
 `PYTHONPATH=src python3.11 -m alpha_gp_lab seeds --live --config fixtures/binance_daily_config.json`,
 exited 1 before reaching a model (0 input and 0 output tokens; `results/llm_live_attempt.json`).
 No retry was made. The seeded config (`fixtures/binance_daily_seeded_config.json`, pre-registered
-in `91823e6`) has not been run, so there is no seeded-vs-ablation comparison on real data; the main
+in `fe6220a`) has not been run, so there is no seeded-vs-ablation comparison on real data; the main
 run is the ablation without seeds. The live path now uses the pinned open-weight model
 `qwen/qwen3.8-27b:free` on OpenRouter, by Oscar's decision on 2026-10-05.
 
-*Note added 2026-10-05, before any live call reached a model:* the `91823e6` pre-registration
+*Note added 2026-10-05, before any live call reached a model:* the `fe6220a` pre-registration
 described the live seeds as coming from `claude -p`. The proposer model has changed to the pinned
 open-weight model above; the seeded config's bytes (brief, n, splits, GP settings) are unchanged.

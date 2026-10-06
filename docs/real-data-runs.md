@@ -9,16 +9,16 @@ relative to the results it could have seen is in [evidence.md](evidence.md#timel
 
 | # | Command | Code | Exit | What happened |
 |---:|---|---|---:|---|
-| 1 | `verify-data` (several times, and inside `check.sh`) | from `91823e6` on | 0 | 34 files match the pinned SHA-256s, rows and dates |
-| 2 | `seeds --live` (main config) | `91823e6` | 1 | CLI not signed in; no LLM output |
-| 3 | `run` main config | `ad4afb5` | 0 | the main-run numbers; printed before `net_tstat` existed; output overwritten by run 4 |
-| 4 | `run` main config | `56129b8` | 0 | identical numbers plus `net_tstat`; overwritten by run 6 |
-| 5 | `run` walk-forward config | `56129b8` | 0 | identical numbers, without `mean_gross` and `valid_ic_intervals`; overwritten by run 7 |
-| 6 | `run` main config | `8c4abfa` | 0 | committed as `results/binance_daily_main.json` |
-| 7 | `run` walk-forward config | `8c4abfa` | 0 | committed as `results/binance_walkforward.json` |
-| 8 | `scripts/analyze_binance.py` (follow-up plan) | `881147e` | 0 | committed as `results/binance_analysis.json`; 20 GP and 20 random-search seeds |
-| 9 | `scripts/diagnose_binance.py` (POST-HOC diagnostics) | `f93540f` | 0 | committed as `results/binance_diagnostics.json`; overwritten by run 10 |
-| 10 | `scripts/diagnose_binance.py` (adds up/down t-statistics and two neutralised reference rankings) | `14b5834` | 0 | every run-9 number reproduced; committed as `results/binance_diagnostics.json` |
+| 1 | `verify-data` (several times, and inside `check.sh`) | from `fe6220a` on | 0 | 34 files match the pinned SHA-256s, rows and dates |
+| 2 | `seeds --live` (main config) | `fe6220a` | 1 | CLI not signed in; no LLM output |
+| 3 | `run` main config | `2dbe673` | 0 | the main-run numbers; printed before `net_tstat` existed; output overwritten by run 4 |
+| 4 | `run` main config | `e8e7090` | 0 | identical numbers plus `net_tstat`; overwritten by run 6 |
+| 5 | `run` walk-forward config | `e8e7090` | 0 | identical numbers, without `mean_gross` and `valid_ic_intervals`; overwritten by run 7 |
+| 6 | `run` main config | `bdf666a` | 0 | committed as `results/binance_daily_main.json` |
+| 7 | `run` walk-forward config | `bdf666a` | 0 | committed as `results/binance_walkforward.json` |
+| 8 | `scripts/analyze_binance.py` (follow-up plan) | `76157af` | 0 | committed as `results/binance_analysis.json`; 20 GP and 20 random-search seeds |
+| 9 | `scripts/diagnose_binance.py` (POST-HOC diagnostics) | `66e346b` | 0 | committed as `results/binance_diagnostics.json`; overwritten by run 10 |
+| 10 | `scripts/diagnose_binance.py` (adds up/down t-statistics and two neutralised reference rankings) | `ea86db2` | 0 | every run-9 number reproduced; committed as `results/binance_diagnostics.json` |
 
 Runs 4 to 7 were repeated only to print more statistics (`net_tstat`, then `mean_gross` and
 `valid_ic_intervals`); every number that existed before was reproduced exactly, and the selection
