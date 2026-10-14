@@ -186,6 +186,14 @@ bash scripts/check.sh                                  # tests, demo, replays: "
 Real data (download, `verify-data`, the main and walk-forward runs, follow-up scripts):
 [docs/reproduce.md](docs/reproduce.md).
 
+To inspect **GP beside random search without downloading market data**, run
+`PYTHONPATH=src python3.11 scripts/example_comparison.py --out runs/comparison-small`.
+It produces a readable per-seed comparison, input/source hashes and replayable primary-run lineage
+on a small labelled synthetic panel. It also handles a rejected primary without inventing a pick
+or return. [Inputs, controls, output files and limits](docs/comparison-example.md).
+Its [budget audit](docs/budget-audit.md) also checks completed work against the declared cap and
+withholds the comparison verdict when a retry limit leaves either search short.
+
 ## Project structure
 
 ```
@@ -240,7 +248,7 @@ figures updated to the 2026-10-06 amendment):
   [microsoft/RD-Agent](https://github.com/microsoft/RD-Agent) (MIT), via Oscar's fork
   [Oscar-Codespace/RD-Agent](https://github.com/Oscar-Codespace/RD-Agent). Here the LLM proposes,
   the GP develops, and the validation and test splits decide; no code is reused.
-- This repo grows out of Oscar's earlier offline search workflow, a toy-scale single-generation
+- This repo grows out of Oscar's earlier offline search workflow, a single-generation
   version with the same no-`eval` parsing, split roles and SQLite replay ideas, rewritten here.
 - Operator names follow Kakushadze, "101 Formulaic Alphas" (2016); semantics are defined here, and
   no code or data from the paper is used.

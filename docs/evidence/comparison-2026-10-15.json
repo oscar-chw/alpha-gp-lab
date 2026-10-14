@@ -1,0 +1,61 @@
+{
+  "examples": {
+    "normal": {
+      "budget_eligible": true,
+      "gp_admitted": [
+        36,
+        36
+      ],
+      "nominal_per_search": 36,
+      "random_admitted": [
+        36,
+        36
+      ]
+    },
+    "retry_limit_one": {
+      "budget_eligible": false,
+      "effective_winner": null,
+      "gp_admitted": [
+        29,
+        34
+      ],
+      "nominal_per_search": 36,
+      "random_admitted": [
+        24,
+        24
+      ]
+    }
+  },
+  "limits": [
+    "Synthetic mechanics only",
+    "Admitted GP slots include copied elites; not equal compute",
+    "Original neutral/negative market results retained",
+    "Local real-data replay is distinct from remote CI without data"
+  ],
+  "original_acceptance_and_results_unchanged": 38,
+  "schema": "alpha-gp-portable-comparison-evidence/v1",
+  "source_sha256": {
+    "fixtures/comparison_small_config.json": "1418a148689d0ef32ccbf63b032490ee35c4648f98f540ea338e98a5fb80f335",
+    "scripts/analyze_binance.py": "d3dd5cf1ad0d70ab41e988d410dc997466e1ca447a0c3a3731186bdf72720b45",
+    "scripts/example_comparison.py": "c0572f90c2e4e2af2fec9759b9532ae4606982fa097b272ce6b296feb2879c9f",
+    "src/alpha_gp_lab/budget.py": "3ab5b47a991a444823c0f2a4b85041c8a6b03933394f0847b4279be1247f168e",
+    "tests/test_analysis_rejection.py": "dcfa03017ccfcac817c78caba9bf97b652e61b30e503a71f04991310f47016c8",
+    "tests/test_audited_result.py": "61ee898ee3f72e639f73d73e9dc608c834f63c21c90f4e3345f140808eea03c4",
+    "tests/test_budget_audit.py": "5e5e13a5305d053fe83965b4f8c9265d7c4dc445ae285928aabcc738b9adb06b",
+    "tests/test_budget_example.py": "ecf2e287e9a5e9ea50aa49ec37f8b1621454c4290e07f622772b9385246754f4",
+    "tests/test_example_comparison.py": "61106535ee3b16d831bc980350fb23a20a4e91c314fe2e9e5b53ef6f80a7e0cd"
+  },
+  "verification": {
+    "independent_root_checks": {
+      "ruff": "PASS",
+      "scope": "Budget and absence handling; no equal-compute or alpha claim",
+      "unit_tests": 15
+    },
+    "local_unchanged_full_gate": {
+      "exit_code": 0,
+      "replays": "PASS including pinned real-data main",
+      "scope": "Previously accepted byte-identical source; no new market study",
+      "unit_tests": 154
+    }
+  }
+}
