@@ -186,13 +186,7 @@ bash scripts/check.sh                                  # tests, demo, replays: "
 Real data (download, `verify-data`, the main and walk-forward runs, follow-up scripts):
 [docs/reproduce.md](docs/reproduce.md).
 
-To inspect **GP beside random search without downloading market data**, run
-`PYTHONPATH=src python3.11 scripts/example_comparison.py --out runs/comparison-small`.
-It produces a readable per-seed comparison, input/source hashes and replayable primary-run lineage
-on a small labelled synthetic panel. It also handles a rejected primary without inventing a pick
-or return. [Inputs, controls, output files and limits](docs/comparison-example.md).
-Its [budget audit](docs/budget-audit.md) also checks completed work against the declared cap and
-withholds the comparison verdict when a retry limit leaves either search short.
+For a small offline comparison, run `PYTHONPATH=src python3.11 scripts/example_comparison.py --out runs/comparison-small`; see [inputs and outputs](docs/comparison-example.md) and the [budget audit](docs/budget-audit.md).
 
 ## Project structure
 

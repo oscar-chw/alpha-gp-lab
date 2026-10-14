@@ -1,0 +1,26 @@
+{
+  "base": "d74ac2d197c5033c9217ebe986c65daf176aa0a0",
+  "new_branch": "codex/alpha-budget-audit-20261014",
+  "accounting": "admitted training slots including cached/copied GP elites; not unique evaluations or equal compute",
+  "counterexample": {
+    "fixture": "fixtures/comparison_small_config.json",
+    "override": {
+      "gp.max_attempts": 1
+    },
+    "seeds": [
+      20261003,
+      20261004
+    ],
+    "nominal_each": 36,
+    "gp_admitted": [
+      29,
+      34
+    ],
+    "random_admitted": [
+      24,
+      24
+    ]
+  },
+  "policy": "Withhold effective winner verdict unless every predeclared search completed its admitted-slot budget; retain raw statistics and qualification status. Malformed/missing/duplicate rows fail.",
+  "limits": "Current deterministic synthetic mechanics/control audit, not preregistered research, profitability or fairness of total compute. No historical result rewrite."
+}
