@@ -57,6 +57,9 @@ def main(argv=None):
         parser.error('small example requires <=16 assets, <=200 dates, <=128 train scores, '
                      'max_attempts<=10 and one split; '
                      'use the general run/analysis commands for other studies')
+    reserved = {'gp_pick', 'random_search_pick', 'range_5d'} & set(config.get('baselines', {}))
+    if reserved:
+        parser.error('baseline names reserved for comparison outputs: ' + ', '.join(sorted(reserved)))
     if out.exists():
         parser.error('use a fresh output directory; existing evidence is never overwritten')
     raw, panel, llm = load_inputs(config_path)

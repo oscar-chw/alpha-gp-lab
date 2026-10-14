@@ -72,6 +72,10 @@ refuses live/replayed LLM seeds and configs outside its small synthetic bounds (
 candidate generation, rather than counting only successful scores. Use the general
 `run` and analysis commands for other studies; do not retune the historical study from this example.
 
+Baseline names `gp_pick`, `random_search_pick` and `range_5d` are reserved by this example's
+result labels and generated control. A collision is refused before generating inputs or creating
+an output directory, rather than failing after the primary search has already run.
+
 A valid retry limit can also leave the declared search budget incomplete. The wrapper now withholds
 an equal-admitted-budget winner verdict in that case, while retaining the raw difference and standard
 error. [Budget audit, concrete shortfall and accounting limits](budget-audit.md).

@@ -1,5 +1,6 @@
 {
-  "accepted_full_gate_inputs_sha256": {
+  "accepted_source_revision": "5d471a23239fcf7657ad599bc1c1223728f007b3",
+  "base_accepted_full_gate_inputs_sha256": {
     ".github/workflows/ci.yml": "b3603fc0438636b7e402e416628620af954484b81bf60f9801bf77e46a76b5ad",
     ".github/workflows/lint.yml": "0cbdc9bd37637e08911a82aa23e6d1fb6a4c8949c91a74bd127c54d86e407266",
     "fixtures/binance_analysis_config.json": "dd4a09e9cacfab276b14fae59224bcca0ec74325fdd2fa09acbb0ce93c637527",
@@ -64,7 +65,83 @@
     "tests/test_stats.py": "dca906221f0df974208fce6cc39ea7825bbd4b5a47ef43fe71f2f21a9148d0bb",
     "tests/test_store.py": "0821121171f3231eb9a476b817f8f4fd912ba3cf230602242067aef1bed82dd6"
   },
-  "accepted_source_revision": "5d471a23239fcf7657ad599bc1c1223728f007b3",
+  "base_source_sha256": {
+    "fixtures/comparison_small_config.json": "1418a148689d0ef32ccbf63b032490ee35c4648f98f540ea338e98a5fb80f335",
+    "scripts/analyze_binance.py": "d3dd5cf1ad0d70ab41e988d410dc997466e1ca447a0c3a3731186bdf72720b45",
+    "scripts/example_comparison.py": "c0572f90c2e4e2af2fec9759b9532ae4606982fa097b272ce6b296feb2879c9f",
+    "src/alpha_gp_lab/budget.py": "3ab5b47a991a444823c0f2a4b85041c8a6b03933394f0847b4279be1247f168e",
+    "tests/test_analysis_rejection.py": "dcfa03017ccfcac817c78caba9bf97b652e61b30e503a71f04991310f47016c8",
+    "tests/test_audited_result.py": "61ee898ee3f72e639f73d73e9dc608c834f63c21c90f4e3345f140808eea03c4",
+    "tests/test_budget_audit.py": "5e5e13a5305d053fe83965b4f8c9265d7c4dc445ae285928aabcc738b9adb06b",
+    "tests/test_budget_example.py": "ecf2e287e9a5e9ea50aa49ec37f8b1621454c4290e07f622772b9385246754f4",
+    "tests/test_example_comparison.py": "61106535ee3b16d831bc980350fb23a20a4e91c314fe2e9e5b53ef6f80a7e0cd"
+  },
+  "current_source_sha256": {
+    ".github/workflows/ci.yml": "b3603fc0438636b7e402e416628620af954484b81bf60f9801bf77e46a76b5ad",
+    ".github/workflows/lint.yml": "0cbdc9bd37637e08911a82aa23e6d1fb6a4c8949c91a74bd127c54d86e407266",
+    "fixtures/binance_analysis_config.json": "dd4a09e9cacfab276b14fae59224bcca0ec74325fdd2fa09acbb0ce93c637527",
+    "fixtures/binance_daily_config.json": "7d14404af8fb02c7ca7888e39a456e8a7c71bb27b8796646a4c4e298d60c199c",
+    "fixtures/binance_daily_seeded_config.json": "7fbce27a7d1c46ad88aea3eee47791a4217b3738c8a5415d8e4fdea41b7da654",
+    "fixtures/binance_diagnostics_config.json": "61b1ac6fb56d0d62568140fb06892277f50c8dbec2702e5f3df1c5dc2be26f79",
+    "fixtures/binance_universe.json": "e5247a3c43950b881c10227c0cfb04017797c08ec0de386c752bdcce258b72ea",
+    "fixtures/binance_walkforward_config.json": "3e5e9df77c7c45e402f633da420ad0075ca452cfa91a575e99eb54ae08126d8e",
+    "fixtures/comparison_small_config.json": "1418a148689d0ef32ccbf63b032490ee35c4648f98f540ea338e98a5fb80f335",
+    "fixtures/demo_config.json": "49d84d38f0b0abb07388f99249ddeec76a1be04d90e503722dc5e821e1f25592",
+    "fixtures/demo_no_seeds_config.json": "5ab7659c85a27c84f94e20c74f8c1f926b9a6b1521a773fa4251ff3754d2e43c",
+    "fixtures/llm_replay.json": "457cea63078a61808d1f243eaef2e87278506b63842df470b2b76fda3914af92",
+    "fixtures/ohlcv_sample/SYN_AAA.csv": "a50d2079fa87cd7f311e73422fab8af2886631d60f00e837346d9dc4fcc18c5a",
+    "fixtures/ohlcv_sample/SYN_BBB.csv": "eaac836d269d630aa69472af47636d9354fe31e273af23787dcd109ace0f9ca5",
+    "fixtures/ohlcv_sample/SYN_CCC.csv": "86cacacf8623312976348544c97686066888749f5addbe64317c4cf08086a860",
+    "fixtures/ohlcv_sample/groups.csv": "c97b734922b8f0ed4f065910962c15d35173c2c6aa1845895d38719a1dae1861",
+    "fixtures/walkforward_config.json": "4226383688f07eb23776b70cb8adcab94ca2b07948621979f3cf08ff7c1fc9ad",
+    "results/binance_analysis.json": "80e0edaa291895db0820557edf65364d477547f2c5c5941975e88e3bed310065",
+    "results/binance_daily_main.json": "77e988a6565511ba5c440a15bdda3b2c9cded653e3d56637536d3af70c588711",
+    "results/binance_diagnostics.json": "70815e9b3807870c98521996e3f8400f6ee58748724df7e42adba999ce201016",
+    "results/binance_walkforward.json": "57dd8d77fb585071d6fa31fc6289539f59d7b581235bae5816f0b9dfa4a7bf82",
+    "results/llm_live_attempt.json": "516a1baa3e8c56b1bf01991a860d45c90f18ae4d91a737761c9bf774838390e3",
+    "scripts/analyze_binance.py": "d3dd5cf1ad0d70ab41e988d410dc997466e1ca447a0c3a3731186bdf72720b45",
+    "scripts/check.sh": "99e9ef39303a547fe9d00762f6d7429666c517503d94294beabc197beab4039c",
+    "scripts/demo.sh": "05aa664990b04da59b334fc6cd767afaae209181442b9fa714235b0d57928a18",
+    "scripts/diagnose_binance.py": "07b83d385a0f64cf8ea168b0af68cf2b83a8d868d9cd5e5349c514f786a97c24",
+    "scripts/env.sh": "0748266da649403f29bdd912ef9628eba16e17aaaff71fdb0e05f3a1547d024e",
+    "scripts/example_comparison.py": "cacec7b28ddb1f6394a63d7d5f65efaf6719c29aa184bc02e2a8c38b096f8203",
+    "scripts/fetch_binance_daily.py": "b1a46dffd3bdfadc8efd3663965b1cebaad217561d071e6f11b032c74a5edcac",
+    "scripts/plot_binance.py": "e95c664684d40a64e4876f3d76e715def7ccd2eb5be74019b59fd501dc292354",
+    "src/alpha_gp_lab/__init__.py": "d51aaa5e908adcacfd990b7ab7bceb1f29f11da383d5c20d89ff846824cb6ae4",
+    "src/alpha_gp_lab/__main__.py": "13a1a5b340cdcfc1902b62be90e508c7c71886000d5bf087e7854aadf09fb35e",
+    "src/alpha_gp_lab/budget.py": "3ab5b47a991a444823c0f2a4b85041c8a6b03933394f0847b4279be1247f168e",
+    "src/alpha_gp_lab/cli.py": "533329f5b5024fa07f5a11561a3fa015ec036d4f21fe03b41139b4d27551c797",
+    "src/alpha_gp_lab/config.py": "9990cd17a3e61e4d922ba3545af00ab80f992d651374689a511e783dd349d06a",
+    "src/alpha_gp_lab/data.py": "4e82bdc3f6b35cb7d95f951b3e64e00a1b6b00ecea659189f48a349b79eb245c",
+    "src/alpha_gp_lab/evaluate.py": "a8052e5758118443d247913080a874faa3411443df41783dc415b0eebf11d8aa",
+    "src/alpha_gp_lab/gp.py": "dd426a23910c1f0b3c52f781ac87828e996aff3afa9f908516834770c954b538",
+    "src/alpha_gp_lab/grammar.py": "7119b48fb08abbd2639899689d2f59421a8769c0e3d2f25f26ee1e0c48e82ba8",
+    "src/alpha_gp_lab/llm_seed.py": "5e16bdcadd7d701cacbdfc843e933e9dd8186b11e1973a774e831cece536f422",
+    "src/alpha_gp_lab/stats.py": "98ece6ff696dec3d2caf7a0cf3e4cb207b92c405a8ccd38e260eb9ffab918a1e",
+    "src/alpha_gp_lab/store.py": "b40a198f17a9f52ec2df9d3bf48c0310eb5726cdfd2eb1e46c8fa61602216145",
+    "tests/hand_cases.py": "81b637f15e445bcee649544a33b1a8a5147678b1b34a4aa2c9037f4782c9df84",
+    "tests/helpers.py": "23bf9497a75429b795850ca882183ffe17598aaa324498a2d2475a63ecec2c05",
+    "tests/test_analysis.py": "8c8a65591fac72b0c7e4fe794e74c9953f9af2ba54d5c6a428d355943f16f8f5",
+    "tests/test_analysis_rejection.py": "dcfa03017ccfcac817c78caba9bf97b652e61b30e503a71f04991310f47016c8",
+    "tests/test_audited_result.py": "61ee898ee3f72e639f73d73e9dc608c834f63c21c90f4e3345f140808eea03c4",
+    "tests/test_budget_audit.py": "5e5e13a5305d053fe83965b4f8c9265d7c4dc445ae285928aabcc738b9adb06b",
+    "tests/test_budget_example.py": "ecf2e287e9a5e9ea50aa49ec37f8b1621454c4290e07f622772b9385246754f4",
+    "tests/test_cli.py": "73a1a1a609443961b2395f45136fff65fcdd159b76ceff799a49f13f1b8adbcd",
+    "tests/test_comparison_names.py": "e4670fd878fc290b92465efa2a20bb023d0610ad9557bf51da78c5d0541db2a0",
+    "tests/test_data.py": "9f717071cdfe15f2c22610381f25e2d894afecab16b64fd0698c11b469a534f9",
+    "tests/test_diagnose_timing.py": "8b49382224543a21cf980606110872993028824a3bf838228039c0c5e9298907",
+    "tests/test_evaluate.py": "e8c630cf2f918db0083ad251f9c56c732a2db2056828f666292bce6e16ea861a",
+    "tests/test_example_comparison.py": "61106535ee3b16d831bc980350fb23a20a4e91c314fe2e9e5b53ef6f80a7e0cd",
+    "tests/test_fetch_binance.py": "6ea64d439b34602b1b2c45141a25bf25fdbd18467d563bf6231e34660c4a1fda",
+    "tests/test_gp.py": "5bddc980ca945da547f217d4b628ee55fdcc3254a57a2d30c94b0a06f9f9f0e1",
+    "tests/test_grammar.py": "c426f593111379c5b8292c818d7bb40df6d22cd3d6914f9e09c74ce9ddf320e2",
+    "tests/test_hand_cases.py": "5ae0b3952012857d57af1f066f192ec8bf1625bacaa3afba739f2add227002ca",
+    "tests/test_llm_seed.py": "02d24eef9f7b9cd0b38ea3d73cd98924911df1428255f94cfb84db50dd1b95a8",
+    "tests/test_real_data_support.py": "846826cb0dab5c52d9f2356f7759e75adcb60bcc683f3e4907abda20a92b4347",
+    "tests/test_scripts_env.py": "11cf9e87dc466c47d356b41cb88b267c6555001373fca05e4567daba2ec0a817",
+    "tests/test_stats.py": "dca906221f0df974208fce6cc39ea7825bbd4b5a47ef43fe71f2f21a9148d0bb",
+    "tests/test_store.py": "0821121171f3231eb9a476b817f8f4fd912ba3cf230602242067aef1bed82dd6"
+  },
   "examples": {
     "normal": {
       "budget_eligible": true,
@@ -91,6 +168,29 @@
         24
       ]
     }
+  },
+  "follow_up": {
+    "final_full_gate_and_ci": "Pending at this evidence freeze; see PR checks at the exact current head.",
+    "fix": "Refuse these three labels before loading inputs or creating output.",
+    "green": {
+      "cli_exit": 2,
+      "exit_code": 0,
+      "input_generation": "not called",
+      "partial_output": false,
+      "tests": 2
+    },
+    "prior_focused_regressions": {
+      "exit_code": 0,
+      "tests": 15
+    },
+    "red": {
+      "failures": 4,
+      "observed_cli_exit": 1,
+      "partial_output": true,
+      "tests": 2
+    },
+    "review_finding": "A valid baseline named range_5d collides after the primary run; gp_pick and random_search_pick are also generated labels.",
+    "test": "tests/test_comparison_names.py"
   },
   "limits": [
     "Synthetic mechanics only",
@@ -140,24 +240,13 @@
   },
   "original_acceptance_and_results_unchanged": 38,
   "schema": "alpha-gp-portable-comparison-evidence/v1",
-  "source_sha256": {
-    "fixtures/comparison_small_config.json": "1418a148689d0ef32ccbf63b032490ee35c4648f98f540ea338e98a5fb80f335",
-    "scripts/analyze_binance.py": "d3dd5cf1ad0d70ab41e988d410dc997466e1ca447a0c3a3731186bdf72720b45",
-    "scripts/example_comparison.py": "c0572f90c2e4e2af2fec9759b9532ae4606982fa097b272ce6b296feb2879c9f",
-    "src/alpha_gp_lab/budget.py": "3ab5b47a991a444823c0f2a4b85041c8a6b03933394f0847b4279be1247f168e",
-    "tests/test_analysis_rejection.py": "dcfa03017ccfcac817c78caba9bf97b652e61b30e503a71f04991310f47016c8",
-    "tests/test_audited_result.py": "61ee898ee3f72e639f73d73e9dc608c834f63c21c90f4e3345f140808eea03c4",
-    "tests/test_budget_audit.py": "5e5e13a5305d053fe83965b4f8c9265d7c4dc445ae285928aabcc738b9adb06b",
-    "tests/test_budget_example.py": "ecf2e287e9a5e9ea50aa49ec37f8b1621454c4290e07f622772b9385246754f4",
-    "tests/test_example_comparison.py": "61106535ee3b16d831bc980350fb23a20a4e91c314fe2e9e5b53ef6f80a7e0cd"
-  },
   "verification": {
     "independent_root_checks": {
       "command": "PYTHONPATH=src:tests python3.11 -m unittest test_budget_audit test_budget_example test_audited_result test_analysis_rejection test_example_comparison",
       "lint_command": "python -m ruff check --config ruff.toml .",
       "receipt_sha256": "73db66175a141494d276da46de0005601cc4f3d9163959d04788fdd42c319f6a",
       "ruff": "PASS",
-      "scope": "Budget and absence handling; no equal-compute or alpha claim",
+      "scope": "Historical15-test accepted-base review; final successor uses its own full gate/remote CI and GitHub Codex review.",
       "unit_tests": 15
     },
     "local_unchanged_full_gate": {
@@ -167,8 +256,8 @@
       "log_sha256": "1d60d5cbb72483d488addd150fc20bccc27c62ce55edb2f28e59453051c817d1",
       "receipt_sha256": "144378dbf9d56e081ea0b9fc1d2f6f23b3a736f4760103c812dfbec9e257ca88",
       "replays": "PASS including pinned real-data main",
-      "scope": "Previously accepted byte-identical source; no new market study",
-      "source_binding": "Every published src/scripts/tests/fixtures/result/CI input listed in accepted_full_gate_inputs_sha256 matches the retained local accepted revision byte-for-byte. The source revision and author receipt are retained locally; hashes are reproducibility fingerprints, not signatures.",
+      "scope": "Historical accepted base source, before the additive reserved-name admission follow-up; not a final successor gate receipt.",
+      "source_binding": "base_accepted_full_gate_inputs_sha256 identifies the retained local5d source and its154-test receipt. current_source_sha256 identifies the portable successor: only the comparison wrapper differs and test_comparison_names.py is added. Original baseline input hashes remain unchanged.",
       "unit_tests": 154
     }
   }
