@@ -1,0 +1,108 @@
+{
+  "base_revision": "57fa3c13c5d0ae27245d8ef58942468b48ff25a5",
+  "causal_controls": [
+    {
+      "detected": true,
+      "errors": 3,
+      "failures": 10,
+      "mutant": "old_normal_equations",
+      "tests": 8
+    },
+    {
+      "detected": true,
+      "errors": 0,
+      "failures": 1,
+      "mutant": "remove_anchor",
+      "tests": 1
+    }
+  ],
+  "limits": "Exact bounded synthetic projection cases and declared numerical rank floor; not a universal accuracy or market/alpha claim.",
+  "rows": [
+    {
+      "after": [
+        0.1000000000000002,
+        0.20000000000000007,
+        -0.7,
+        0.40000000000000013
+      ],
+      "after_max_abs_error": 1.942890293094024e-16,
+      "before": [
+        0.10000000000000053,
+        0.20000000000000018,
+        -0.7000000000000002,
+        0.39999999999999947
+      ],
+      "before_max_abs_error": 5.551115123125783e-16,
+      "case": "baseline"
+    },
+    {
+      "after": [
+        0.1000000000000002,
+        0.20000000000000007,
+        -0.7,
+        0.40000000000000013
+      ],
+      "after_max_abs_error": 1.942890293094024e-16,
+      "before": [
+        0.10000000000000009,
+        0.2000000000000003,
+        -0.6999999999999995,
+        0.40000000000000036
+      ],
+      "before_max_abs_error": 4.440892098500626e-16,
+      "case": "units_1e-6"
+    },
+    {
+      "after": [
+        0.1000000000000002,
+        0.20000000000000007,
+        -0.7,
+        0.40000000000000013
+      ],
+      "after_max_abs_error": 1.942890293094024e-16,
+      "before": [
+        0.09999999999999938,
+        0.19999999999999962,
+        -0.7000000000000002,
+        0.39999999999999947
+      ],
+      "before_max_abs_error": 6.245004513516506e-16,
+      "case": "units_1e6"
+    },
+    {
+      "after": [
+        0.1000000000000002,
+        0.20000000000000007,
+        -0.7,
+        0.40000000000000013
+      ],
+      "after_max_abs_error": 1.942890293094024e-16,
+      "before": [
+        0.10005056171212345,
+        0.20001685386523604,
+        -0.700016853865236,
+        0.39994943828787655
+      ],
+      "before_max_abs_error": 5.056171212347582e-05,
+      "case": "origin_1e6"
+    }
+  ],
+  "schema": "alpha-gp-ols-stability-evidence/v1",
+  "singular_control": null,
+  "source_sha256": {
+    "src/alpha_gp_lab/stats.py": "7599091bee6b890832392d6a0e5be4f11e6b82d4732fd8e6aa113330f0c3ab32",
+    "tests/test_residualise_stability.py": "4867601315e16d4b6ac159a31fbf5f3e01d31b7a989453e8c495f36d269139a1",
+    "tests/test_stats.py": "dca906221f0df974208fce6cc39ea7825bbd4b5a47ef43fe71f2f21a9148d0bb"
+  },
+  "tests": {
+    "focused_stats_and_stability": {
+      "exit_code": 0,
+      "tests": 20
+    },
+    "original_stats_assertions": "UNCHANGED",
+    "scope_and_preservation": {
+      "exit_code": 0,
+      "tests": 11
+    }
+  }
+}

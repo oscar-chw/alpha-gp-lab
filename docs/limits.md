@@ -49,6 +49,11 @@ Every known limit of the method and the results. The README lists the six that m
   and, since the cost amendment, on test net, and a one-line range measure matches its pick. What remains is mostly a fixed tilt (frozen ranking
   87%, constant low-beta ranking 81%; 60% survives beta and size neutralisation); the main
   evidence is about that, not about genetic programming.
+- **Search seeds are not market draws.** The Welch standard error over selected optimizer seeds
+  conditions on the same universe, panel, splits and validation selection. More seeds reduce
+  uncertainty about optimizer behaviour there; they do not measure market or future-regime
+  generalisation. The original2-SE arithmetic is unchanged. Admitted slots include copied
+  elites/cached scores and are not equal compute; see the [methodology successor](methodology-successor.md).
 - **The grammar has no units in the recorded runs.** Raw price and volume levels can be ranked
   across coins, where they act as size proxies (7 of 20 GP seed picks, 4 of 20 random-search
   picks, walk-forward folds 1 and 3, which both pick `-volume`). Proposed fix, implemented but off:

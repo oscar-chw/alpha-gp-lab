@@ -1,0 +1,24 @@
+{
+  "source_sha256": "3ab5b47a991a444823c0f2a4b85041c8a6b03933394f0847b4279be1247f168e",
+  "working_source_unchanged": true,
+  "results": [
+    {
+      "mutant": "ignore_shortfall",
+      "test": "test_unequal_completed_work_cannot_be_reported_as_gp_superiority",
+      "exit_code": 1,
+      "detected": true
+    },
+    {
+      "mutant": "accept_equal_underfill",
+      "test": "test_equal_but_incomplete_counts_do_not_complete_a_declared_protocol",
+      "exit_code": 1,
+      "detected": true
+    },
+    {
+      "mutant": "overwrite_duplicate",
+      "test": "test_missing_duplicate_and_unexpected_rows_fail",
+      "exit_code": 1,
+      "detected": true
+    }
+  ]
+}

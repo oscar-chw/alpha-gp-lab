@@ -1,0 +1,6 @@
+{
+  "mutant": "leave unadjusted winner in canonical result",
+  "exit_code": 1,
+  "detected": true,
+  "working_source_unchanged": true
+}

@@ -53,7 +53,7 @@ the pinned OpenRouter model; it needs `OPENROUTER_API_KEY` (or the file
 
 ## Tests and runtime
 
-- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints `Ran 137 tests` and `OK`.
+- `PYTHONPATH=src python3.11 -m unittest discover -s tests` prints the collected test count and `OK` on success.
 - `python3.11 tests/hand_cases.py` re-derives the evaluator's arithmetic in exact Fractions:
   for example IC 2/5, turnover 323/48 (from the drifted book; 2 between the two targets), gross
   1/20 and net 4477/96000 on a four-asset case.

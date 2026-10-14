@@ -1,0 +1,8 @@
+{
+  "mutation": "leak unadjusted winner rule to CLI instead of audited decision",
+  "source_sha256": "5c4104c743aea277b04d736125b213368c68a8ab4ab1f62aaa7aba299f9f37c4",
+  "test": "test_real_shortfall_withholds_verdict_and_retains_raw_statistics",
+  "exit_code": 1,
+  "detected": true,
+  "working_source_unchanged": true
+}

@@ -97,7 +97,8 @@ def _over_seeds(rows):
 
 def _welch(a, b):
     """Difference of means, its Welch standard error and the pre-registered 2-SE rule. With fewer than two
-    picks on either side there is no standard error: the rule cannot be applied, and the reason is reported."""
+    picks on either side there is no standard error: the rule cannot be applied, and the reason is reported.
+    This is selected-optimizer variability on one fixed panel/split, not market or regime uncertainty."""
     if a is None or b is None or a['sd'] is None or b['sd'] is None:
         return dict(difference=a['mean'] - b['mean'] if a and b else None, standard_error=None, gp_beats_random=None,
                     undecided='too few picks: GP {}, random search {}'.format(*(len(x['values']) if x else 0 for x in (a, b))))
@@ -139,26 +140,30 @@ def main(argv=None):
     rs0 = next(r for r in rs_rows if r['seed'] == primary)
 
     # The analysis must describe the committed pick, or nothing it says applies to the README.
-    if gp0['selected'] != committed['selected'] or not all(_same(gp0['test'][k], committed['test'][k])
-                                                             for k in ('mean_ic', 'mean_net')):
+    gp_test = gp0['test']
+    same_test = gp_test is None and committed['test'] is None
+    if gp_test is not None and committed['test'] is not None:
+        same_test = all(_same(gp_test[k], committed['test'][k]) for k in ('mean_ic', 'mean_net'))
+    if gp0['selected'] != committed['selected'] or not same_test:
         sys.exit('primary-seed GP rerun does not reproduce ' + plan['main_result'])
 
     tester = Evaluator(panel.head(xe + 1), config['evaluation']['delay'], config['evaluation']['fee_bps'])
-    series = {'gp_pick': gp0['test']}
+    series = {'gp_pick': gp_test} if gp_test is not None else {}
     if rs0['test']:
         series['random_search_pick'] = rs0['test']
     for name, expr in sorted(plan['control'].items()):
         series[name] = tester.metrics(parse(expr), xs, xe, detail=True)
-    for name, expr in sorted(config['baselines'].items()):
+    for name, expr in sorted(config.get('baselines', {}).items()):
         series[name] = tester.metrics(parse(expr), xs, xe, detail=True)
         if not _same(series[name]['mean_ic'], committed['baselines'][name]['test']['mean_ic']):
             sys.exit(f'baseline {name} does not reproduce ' + plan['main_result'])
 
     inference = {n: _inference(s['ic_series'], s['net_series'], plan) for n, s in series.items()}
-    p_iid = _p(gp0['test']['ic_tstat'])
-    significance = dict(ic_tstat_iid=gp0['test']['ic_tstat'], p_iid=p_iid, newey_west={})
+    ic_tstat = gp_test['ic_tstat'] if gp_test is not None else None
+    p_iid = _p(ic_tstat)
+    significance = dict(ic_tstat_iid=ic_tstat, p_iid=p_iid, newey_west={})
     counts = dict(validation_candidates=gp0['trials']['validation'], unique_expressions=gp0['trials']['distinct'])
-    for lag, t in inference['gp_pick']['ic']['newey_west_tstat'].items():
+    for lag, t in (inference['gp_pick']['ic']['newey_west_tstat'] if gp_test is not None else {}).items():
         p = _p(t)
         significance['newey_west'][lag] = dict(t=t, p=p, bonferroni={c: dict(m=counts[c], p=_bonferroni(p, counts[c]))
                                                                       for c in plan['bonferroni_counts']})
@@ -169,13 +174,14 @@ def main(argv=None):
                  gp_minus_random={m: _welch(gp_seeds[m], rs_seeds[m]) for m in ('mean_ic', 'mean_net')})
 
     validation_ev = Evaluator(panel.head(ve + 1), config['evaluation']['delay'], config['evaluation']['fee_bps'])
-    pick = parse(gp0['selected'])
+    pick = parse(gp0['selected']) if gp_test is not None else None
     interpretation = {name: dict(expression=str(parse(expr)),
                                  train_corr=validation_ev.correlation(pick, parse(expr), ts, te),
                                  validation_corr=validation_ev.correlation(pick, parse(expr), vs, ve))
-                      for name, expr in sorted(plan['interpretation_references'].items())}
+                      for name, expr in sorted(plan['interpretation_references'].items())} if pick is not None else {}
 
-    expressions = dict(gp_pick=gp0['selected'], random_search_pick=rs0['selected'], **plan['control'], **config['baselines'])
+    expressions = dict(gp_pick=gp0['selected'], random_search_pick=rs0['selected'],
+                       **plan['control'], **config.get('baselines', {}))
     table = {n: dict(expression=str(parse(expressions[n])), test={k: s[k] for k in KEEP},
                      validation={k: v for k, v in validation_ev.metrics(parse(expressions[n]), vs, ve).items() if k in KEEP})
              for n, s in series.items()}
@@ -183,13 +189,17 @@ def main(argv=None):
         name=plan['name'], main_config=plan['main_config'], primary_seed=primary,
         test_dates=[panel.dates[t + 1] for t in range(xs, xe)],   # interval t closes at close[t + 1]
         fee_bps_per_side=config['evaluation']['fee_bps'], table=table,
-        trials=dict(gp=gp0['trials'], random_search=rs0['trials'], test=1),
+        trials=dict(gp=gp0['trials'], random_search=rs0['trials'], test=int(gp_test is not None)),
         inference=inference, significance=significance,
-        pick_minus={n: _difference(series['gp_pick'], s, plan) for n, s in series.items() if n != 'gp_pick'},
+        pick_minus={n: _difference(series['gp_pick'], s, plan) for n, s in series.items()
+                    if n != 'gp_pick'} if gp_test is not None else {},
         seeds=seeds, per_seed=[{k: r[k] for k in ('kind', 'seed', 'status', 'selected', 'trials', 'validation')}
                                | dict(test={k: r['test'][k] for k in KEEP} if r['test'] else None) for r in rows],
         interpretation=interpretation,
         series={n: dict(ic=s['ic_series'], net=s['net_series']) for n, s in series.items()})
+    if gp_test is None:
+        report['primary_selection'] = dict(gp=gp0['status'], random_search=rs0['status'])
+        significance['unavailable'] = 'primary GP seed selected no qualifying candidate; no pick or test score'
     Path(args.out).write_text(json.dumps(report, indent=1, sort_keys=True) + '\n')
     print(json.dumps(dict(table={n: {k: r['test'][k] for k in ('mean_ic', 'mean_net')} | dict(expression=r['expression'])
                                  for n, r in report['table'].items()},

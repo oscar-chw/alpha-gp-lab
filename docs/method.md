@@ -78,6 +78,14 @@ and post-hoc diagnostics (IC by market state, constant-ranking controls, IC afte
 residualisation on trailing beta and size, per-coin P&L contributions) sit beside the i.i.d.
 t-statistic the evaluator prints.
 
+The GP-versus-random Welch standard error is computed across selected search-seed outcomes on
+one frozen panel, split and validation rule. It measures conditional optimizer variability,
+rather than uncertainty from other markets, universes or future regimes. The original2-SE rule
+remains a comparison rule for that experiment. Its admitted-slot cap includes copied elites and
+cached scores; it does not establish equal unique evaluations, validation effort or compute.
+The [methodology successor](methodology-successor.md) documents stable OLS residualisation and
+the separately identified replay of the original post-hoc diagnostics.
+
 **Opt-in rules for future windows.** `gp.unit_check` rejects any candidate whose per-coin unit
 does not cancel (`grammar.coin_units`: a price is USDT per coin, a volume is coins, so ranking raw
 `close` or `volume` across coins ranks by the arbitrary size of a coin unit). `selection.min_coverage`

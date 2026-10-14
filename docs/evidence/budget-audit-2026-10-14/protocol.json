@@ -1,0 +1,28 @@
+{
+  "accounting": "admitted training slots including cached/copied GP elites; not unique evaluations or equal compute",
+  "base": "51da88a911c5d990a4796d85c4c4eec5d25769f6",
+  "counterexample": {
+    "fixture": "fixtures/comparison_small_config.json",
+    "gp_admitted": [
+      29,
+      34
+    ],
+    "nominal_each": 36,
+    "override": {
+      "gp.max_attempts": 1
+    },
+    "random_admitted": [
+      24,
+      24
+    ],
+    "seeds": [
+      20261003,
+      20261004
+    ]
+  },
+  "limits": "Current deterministic synthetic mechanics/control audit, not preregistered research, profitability or fairness of total compute. No historical result rewrite.",
+  "new_branch": "codex/alpha-comparison-final-20261015",
+  "policy": "Withhold effective winner verdict unless every predeclared search completed its admitted-slot budget; retain raw statistics and qualification status. Malformed/missing/duplicate rows fail.",
+  "schema": "alpha-gp-small-budget-protocol/v1",
+  "source_manifest": "../comparison-2026-10-15.json"
+}
