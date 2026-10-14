@@ -97,7 +97,8 @@ def _over_seeds(rows):
 
 def _welch(a, b):
     """Difference of means, its Welch standard error and the pre-registered 2-SE rule. With fewer than two
-    picks on either side there is no standard error: the rule cannot be applied, and the reason is reported."""
+    picks on either side there is no standard error: the rule cannot be applied, and the reason is reported.
+    This is selected-optimizer variability on one fixed panel/split, not market or regime uncertainty."""
     if a is None or b is None or a['sd'] is None or b['sd'] is None:
         return dict(difference=a['mean'] - b['mean'] if a and b else None, standard_error=None, gp_beats_random=None,
                     undecided='too few picks: GP {}, random search {}'.format(*(len(x['values']) if x else 0 for x in (a, b))))

@@ -40,7 +40,7 @@ example, **not a preregistered financial study or evidence of a market edge**.
 | Execution | Delay 1; close-to-close hypothetical returns, unit-gross dollar-neutral weights |
 | Costs | 5 bps per side × drifted-book turnover; no spread, slippage, borrow or funding |
 | Controls | Fixed reversal and momentum baselines plus a 5-day range factor, evaluated with the same timing and fee |
-| Inference | Existing 2-SE rule over selected seeds; just two seeds and a short synthetic holdout are mechanics evidence |
+| Inference | Existing Welch/2-SE rule describes variability across selected optimizer seeds on this fixed panel/split, not uncertainty across markets or future regimes |
 
 The primary GP run is rerun by the analysis and must reproduce its saved expression and metrics.
 The comparison is refused before writing output if the saved primary record disagrees. Selecting
@@ -75,6 +75,12 @@ candidate generation, rather than counting only successful scores. Use the gener
 Baseline names `gp_pick`, `random_search_pick` and `range_5d` are reserved by this example's
 result labels and generated control. A collision is refused before generating inputs or creating
 an output directory, rather than failing after the primary search has already run.
+
+`comparison_scope` in the canonical result and CLI makes the uncertainty scope explicit. More
+search seeds refine the conditional optimizer comparison; they do not create new market windows
+or remove survivorship, reused-holdout and cost-model limitations. Admitted slots, including
+copied elites and cached scores, establish this budget rule's accounting basis rather than equal
+compute. Numeric differences, standard errors and the original decision rule are preserved.
 
 A valid retry limit can also leave the declared search budget incomplete. The wrapper now withholds
 an equal-admitted-budget winner verdict in that case, while retaining the raw difference and standard

@@ -32,6 +32,8 @@ def markdown(report, config, audit):
         lines.append(f"| {row['kind']} | {row['seed']} | {row['status']} | `{row['selected']}` | "
                      f"{test.get('mean_ic')} | {test.get('mean_net')} | {row['trials']['train']} |")
     lines += ['', 'GP minus random across selected seeds (original 2-SE rule; two seeds are a mechanics sample):',
+              'The Welch standard error measures optimizer variability on this fixed panel, splits and validation rule; '
+              'not uncertainty across markets or future regimes.',
               '', '```json', json.dumps(audit['comparison'], indent=2, sort_keys=True), '```', '',
               'Read audited_comparison.json for the canonical controls, daily series and effective inference.',
               'comparison.json is the raw legacy analysis; its winner arithmetic is unadjusted.',
@@ -93,6 +95,10 @@ def main(argv=None):
     audited['unadjusted_gp_minus_random'] = copy.deepcopy(report['seeds']['gp_minus_random'])
     audited['seeds']['gp_minus_random'] = copy.deepcopy(audit['comparison'])
     audited['budget_audit'] = {k: v for k, v in audit.items() if k not in ('comparison', 'unadjusted_comparison')}
+    audited['comparison_scope'] = dict(standard_error='optimizer variability across selected search seeds',
+                                      conditioned_on=['fixed_panel', 'fixed_splits', 'validation_selection'],
+                                      market_or_future_regime_uncertainty=False, equal_compute=False,
+                                      budget_basis=audit['budget_basis'])
     (out / 'audited_comparison.json').write_text(json.dumps(audited, indent=2, sort_keys=True) + '\n')
     (out / 'report.md').write_text(markdown(report, config, audit))
     sources = [Path(__file__).resolve(), ROOT / 'scripts' / 'analyze_binance.py', *sorted(store.PACKAGE.glob('*.py'))]
@@ -106,7 +112,8 @@ def main(argv=None):
     (out / 'example_manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
     print(json.dumps(dict(data=panel.label, seeds=seeds, candidate_budget_per_search=budget,
                          report=str(out / 'report.md'), comparison=audit['comparison'],
-                         budget_eligible=audit['eligible'], canonical_result='audited_comparison.json'), indent=2))
+                         budget_eligible=audit['eligible'], canonical_result='audited_comparison.json',
+                         comparison_scope=audited['comparison_scope']), indent=2))
     return 0
 
 

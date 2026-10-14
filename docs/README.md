@@ -20,6 +20,7 @@ Start with the [project README](../README.md); every page below answers one ques
 | [synthetic-results.md](synthetic-results.md) | What do the SYNTHETIC demo, its no-seeds ablation and the four-regime walk-forward show? |
 | [comparison-example.md](comparison-example.md) | How do I inspect a small offline GP/random comparison, including a rejected pick? |
 | [budget-audit.md](budget-audit.md) | When must incomplete admitted-score budgets withhold a winner verdict? |
+| [methodology-successor.md](methodology-successor.md) | How is OLS conditioning repaired, and what does the search-seed standard error actually measure? |
 | [real-data-runs.md](real-data-runs.md) | Which real-data commands ran, with which code, and the main tables at full precision |
 | [evidence.md](evidence.md) | What was committed before which result, and how do the commit hashes map? |
 | [limits.md](limits.md) | What can these results not tell you? Every known limit |

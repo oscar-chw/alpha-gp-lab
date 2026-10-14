@@ -1,0 +1,17 @@
+{
+  "archived_inputs_unchanged": true,
+  "archived_sha256": "70815e9b3807870c98521996e3f8400f6ee58748724df7e42adba999ce201016",
+  "changed_fields": 0,
+  "differences": [],
+  "exact_semantic_match": true,
+  "non_ols_fields_changed": false,
+  "portable_equivalent_command": "PYTHONPATH=src python3.11 scripts/diagnose_binance.py --config fixtures/binance_diagnostics_config.json --out runs/methodology-diagnostic-successor.json",
+  "real_data_verified": true,
+  "reason": "Replayed the exact frozen diagnostic config against already pinned data; no search, acquisition or protocol change.",
+  "root_main_claim": "No archived figures overwritten; any difference above is from this separate replay only.",
+  "scope": "Numerical-method replay of the already spent historical window; no new market evidence.",
+  "solver_sha256": "7599091bee6b890832392d6a0e5be4f11e6b82d4732fd8e6aa113330f0c3ab32",
+  "source": "34 pinned Binance CSVs, existing2020-01-01 to2026-08-31 data",
+  "status": "COMPARED_FIXED_DIAGNOSTIC",
+  "successor_sha256": "70815e9b3807870c98521996e3f8400f6ee58748724df7e42adba999ce201016"
+}

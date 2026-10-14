@@ -34,7 +34,7 @@ flowchart TB
     end
     subgraph CTRL["Controls"]
         BASE["baselines<br/>momentum_20d,<br/>reversal_1d"]
-        RS["gp.random_search<br/>equal budget"]
+        RS["gp.random_search<br/>same admitted-slot cap"]
         ONE["range_10d<br/>one-line control"]
     end
     COST["Evaluator.metrics<br/>delay 1, net = gross<br/>minus 10 bps x turnover"]
@@ -159,7 +159,7 @@ REAL = Binance daily spot, 34 USDT pairs still trading in 2026 (survivorship-bia
 |---|---|---|
 | Does the GP pick rank coins on test? (REAL) | Yes: rank IC 0.082, t 7.1 (Newey-West 7.6) | [main run](docs/results.md#main-run), `results/binance_daily_main.json` |
 | Does it make money? (REAL) | No: gross t 0.96, net 7.0e-5 per day, net t 0.19 | [main run](docs/results.md#main-run), [diagnostics](docs/results.md#what-the-test-ic-is-post-hoc-diagnostics) |
-| Does GP beat equal-budget random search? (REAL, 20 seeds each) | No: test IC 0.072 vs 0.067, 0.87 SE (rule: 2 SE); test net 1.67 SE, which passed (3.06 SE) before the cost amendment below | [follow-up](docs/results.md#follow-up-analyses-pre-registered-after-the-main-result), `results/binance_analysis.json` |
+| Does GP beat random search on this fixed window? (REAL, 20 seeds each) | No: test IC 0.072 vs 0.067, 0.87 SE over search seeds (rule: 2 SE); test net 1.67 SE, which passed (3.06 SE) before the cost amendment below | [follow-up](docs/results.md#follow-up-analyses-pre-registered-after-the-main-result), `results/binance_analysis.json` |
 | Does a one-line factor match the pick? (REAL) | Yes: 10-day mean range, test IC 0.082 vs 0.082 | [follow-up](docs/results.md#follow-up-analyses-pre-registered-after-the-main-result) |
 | What is the IC? (REAL, POST-HOC) | Mostly a fixed tilt: a frozen 2024 ranking scores 87% of it, constant low beta 81%; 60% survives beta and size neutralisation, on down days only, like low volatility | [diagnostics](docs/results.md#what-the-test-ic-is-post-hoc-diagnostics), `results/binance_diagnostics.json` |
 | Does it hold across years? (REAL, 4 walk-forward folds) | Mean test IC 0.049, all 4 folds positive, but net negative in 3, and 2 folds pick raw `-volume`, a size proxy | [walk-forward](docs/results.md#walk-forward), `results/binance_walkforward.json` |

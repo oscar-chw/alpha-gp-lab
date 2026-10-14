@@ -52,19 +52,58 @@ def block_bootstrap_ci(xs, block, reps, seed, level=0.95):
 
 def residualise(y, columns):
     """Residuals of an OLS fit of ``y`` on an intercept and ``columns`` (lists the length of y),
-    by the normal equations; None when the regressors are collinear."""
-    rows = [[1.0] + [c[i] for c in columns] for i in range(len(y))]
-    k = len(rows[0])
-    a = [[math.fsum(r[p] * r[q] for r in rows) for q in range(k)] + [math.fsum(r[p] * v for r, v in zip(rows, y))]
-         for p in range(k)]
-    for col in range(k):   # Gauss-Jordan with partial pivoting on the k x (k+1) system
-        piv = max(range(col, k), key=lambda r: abs(a[r][col]))
-        if abs(a[piv][col]) < 1e-12 * max(1.0, max(abs(x) for x in a[piv][:k])):
+    by centered/scaled Householder QR; None for a numerically rank-deficient design.
+    Unit-norm columns retain the 1e-12 squared independent-component rank floor."""
+    n, p = len(y), len(columns)
+    if n <= p:
+        return None
+
+    def centered(xs):
+        # Subtract an anchor first: an arbitrary large origin must not erase local variation.
+        shifted = [x - xs[0] for x in xs]
+        scale = max(abs(x) for x in shifted)
+        if not math.isfinite(scale):
+            # Opposite finite extremes can overflow the subtraction; normalize first only then.
+            scale = max(abs(x) for x in xs)
+            shifted = [x / scale - xs[0] / scale for x in xs]
+        elif scale:
+            shifted = [x / scale for x in shifted]
+        else:
+            return [0.0] * n, 1.0
+        mean = math.fsum(shifted) / n
+        return [x - mean for x in shifted], scale
+
+    a = []
+    for column in columns:
+        c, _ = centered(column)
+        norm = math.hypot(*c)
+        if norm == 0:
             return None
-        a[col], a[piv] = a[piv], a[col]
-        for r in range(k):
-            if r != col:
-                f = a[r][col] / a[col][col]
-                a[r] = [x - f * z for x, z in zip(a[r], a[col])]
-    beta = [a[r][k] / a[r][r] for r in range(k)]
-    return [v - math.fsum(b * x for b, x in zip(beta, r)) for v, r in zip(y, rows)]
+        a.append([x / norm for x in c])
+    residual, response_scale = centered(y)
+    reflectors = []
+
+    def reflect(xs, start, v):
+        dot = 2 * math.fsum(h * xs[start + i] for i, h in enumerate(v))
+        for i, h in enumerate(v):
+            xs[start + i] -= h * dot
+
+    for j in range(p):
+        pivot = max(range(j, p), key=lambda q: math.hypot(*a[q][j:]))
+        a[j], a[pivot] = a[pivot], a[j]
+        v = a[j][j:]
+        norm = math.hypot(*v)
+        if norm * norm < 1e-12:
+            return None
+        v[0] += math.copysign(norm, v[0])   # opposite-sign reflector avoids cancellation
+        length = math.hypot(*v)
+        v = [h / length for h in v]
+        for c in a[j:]:
+            reflect(c, j, v)
+        reflect(residual, j, v)
+        reflectors.append((j, v))
+    # Project directly; recovering a large intercept and subtracting fitted values loses bits.
+    residual[:p] = [0.0] * p
+    for j, v in reversed(reflectors):
+        reflect(residual, j, v)
+    return [x * response_scale for x in residual]
